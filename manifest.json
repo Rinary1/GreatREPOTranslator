@@ -1,0 +1,9 @@
+{
+  "name": "Great_REPO_Translator",
+  "version_number": "1.1.0",
+  "website_url": "",
+  "description": "R.E.P.O. Translator, based on realisation of QERT2002 and his mod REPO_Translator",
+  "dependencies": [
+    "BepInEx-BepInExPack-5.4.2100"
+  ]
+}
