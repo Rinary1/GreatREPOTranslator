@@ -21,7 +21,7 @@ public class MenuSliderLanguage : MonoBehaviour
 
 	private static REPO_Translator_Config _config = Translator.REPO_Translator.ConfigInstance;
 
-	private void Awake()
+	public void Start()
 	{
 		menuSlider = GetComponent<MenuSlider>();
 		SetOptions();
@@ -84,13 +84,14 @@ public class MenuSliderLanguage : MonoBehaviour
 		// Clear
 		menuSlider.customOptions.Clear();
 		menuSlider.hasCustomOptions = true;
+		menuSlider.hasCustomValues = true;
 
 		// Find Selected
 		if (_langMan == null)
 			InitializeLangMan();
-		int selectedIndex = 0;
+
 		string selectedLang = _langMan.GetSelectedLanguage();
-		Translator.REPO_Translator.Log.LogInfo($"Selected language code: {selectedLang}");
+		int selectedIndex = 0;
 
 		// Find
 		var translations = _Translator.GetAllAvailableTranslations();
@@ -100,8 +101,11 @@ public class MenuSliderLanguage : MonoBehaviour
 		for (int i = 0; i < translations.Count; i++)
 		{
 			string lang = translations[i];
-			Translator.REPO_Translator.Log.LogInfo($"Add translate to tab: {lang}");
+			int index = i;
+
 			menuSlider.CustomOptionAdd(lang, langEvent);
+			menuSlider.customOptions[i].customValueInt = i;
+			Translator.REPO_Translator.Log.LogInfo($"Add translate to tab: {lang}");
 
 			if (lang.Equals(selectedLang, StringComparison.OrdinalIgnoreCase))
 			{
@@ -110,16 +114,12 @@ public class MenuSliderLanguage : MonoBehaviour
 			}
 		}
 
-		foreach (MenuSlider.CustomOption customOption in menuSlider.customOptions)
-		{
-			customOption.customValueInt = menuSlider.customOptions.IndexOf(customOption);
-		}
-
 		if (selectedIndex >= 0 && menuSlider.customOptions.Count > 1)
 		{
 			float normalizedValue = (float)selectedIndex / (menuSlider.customOptions.Count - 1);
-			menuSlider.settingsBar.localScale = new Vector3(normalizedValue, menuSlider.settingsBar.localScale.y, menuSlider.settingsBar.localScale.z);
 			menuSlider.SetBar(normalizedValue);
+			menuSlider.SetBarScaleInstant();
+			menuSlider.UpdateSegmentTextAndValue();
 		}
 
 		currentLangCount = translations.Count;

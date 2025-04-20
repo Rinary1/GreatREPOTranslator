@@ -203,11 +203,15 @@ public class REPO_Translator : BaseUnityPlugin
     private static void UpdateAllTextMeshProObjects()
     {
         foreach (var textObject in FindObjectsOfType<TMP_Text>())
+        {
             if (textObject != null)
             {
                 string text = textObject.text;
                 UpdateTextMeshProText(textObject, ref text, true);
+                textObject.text = text;
+                textObject.ForceMeshUpdate();
             }
+        }
     }
 
     private static void UpdateTextMeshProText(TMP_Text textObject, ref string text, bool setText = true)
