@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\Programms\\REPO_Translator\\REPO_Translator.csproj": {}
+    "D:\\Programms\\GreatREPOTranslator\\REPO_Translator.csproj": {}
   },
   "projects": {
-    "D:\\Programms\\REPO_Translator\\REPO_Translator.csproj": {
+    "D:\\Programms\\GreatREPOTranslator\\REPO_Translator.csproj": {
       "version": "1.1.0",
       "restore": {
-        "projectUniqueName": "D:\\Programms\\REPO_Translator\\REPO_Translator.csproj",
+        "projectUniqueName": "D:\\Programms\\GreatREPOTranslator\\REPO_Translator.csproj",
         "projectName": "REPO_Translator",
-        "projectPath": "D:\\Programms\\REPO_Translator\\REPO_Translator.csproj",
+        "projectPath": "D:\\Programms\\GreatREPOTranslator\\REPO_Translator.csproj",
         "packagesPath": "C:\\Users\\rinar\\.nuget\\packages\\",
-        "outputPath": "D:\\Programms\\REPO_Translator\\obj\\",
+        "outputPath": "D:\\Programms\\GreatREPOTranslator\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages",
