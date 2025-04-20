@@ -337,6 +337,8 @@ public class REPO_Translator : BaseUnityPlugin
     {
         try
         {
+            if (_langMan.GetSelectedLanguage() == "EN")
+                return new List<Translate>();
             using (FileStream fileStream = new FileStream(GetTranslatePath(), FileMode.Open))
             {
                 return (List<Translate>)new XmlSerializer(typeof(List<Translate>)).Deserialize(fileStream);
