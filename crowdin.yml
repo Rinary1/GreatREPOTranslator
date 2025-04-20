@@ -1,10 +1,6 @@
 files:
   - source: Resources/Translations/Translate_EN.xml
     translation: /Resources/Translations/Translate_%two_letters_code%.%file_extension%
-    scheme: custom
+    content_segmentation: 0
     translatable_elements:
-      - xpath: /ArrayOfTranslate/Translate
-        content_attribute: translate
-        key_attribute: key
-        preserve_non_translatable_attributes: 1
-    content_segmentation: 
+      - '/ArrayOfTranslate/Translate[@translate]'
