@@ -3,8 +3,8 @@ files:
     translation: /Resources/Translations/Translate_%two_letters_code%.%file_extension%
     scheme: custom
     translatable_elements:
-      - xpath: '/ArrayOfTranslate/Translate'
+      - xpath: /ArrayOfTranslate/Translate
         content_attribute: translate
         key_attribute: key
-        preserve_non_translatable_attributes: true
-    content_segmentation: false
+        preserve_non_translatable_attributes: 1
+    content_segmentation: 
