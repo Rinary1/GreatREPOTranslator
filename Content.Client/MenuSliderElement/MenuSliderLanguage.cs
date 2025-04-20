@@ -106,6 +106,7 @@ public class MenuSliderLanguage : MonoBehaviour
 			if (lang.Equals(selectedLang, StringComparison.OrdinalIgnoreCase))
 			{
 				selectedIndex = i;
+				Translator.REPO_Translator.Log.LogInfo($"Finded selected language code: {lang}");
 			}
 		}
 
@@ -114,10 +115,13 @@ public class MenuSliderLanguage : MonoBehaviour
 			customOption.customValueInt = menuSlider.customOptions.IndexOf(customOption);
 		}
 
-		if (selectedIndex >= 0)
-			menuSlider.SetBar(selectedIndex);
+		if (selectedIndex >= 0 && menuSlider.customOptions.Count > 1)
+		{
+			float normalizedValue = (float)selectedIndex / (menuSlider.customOptions.Count - 1);
+			menuSlider.settingsBar.localScale = new Vector3(normalizedValue, menuSlider.settingsBar.localScale.y, menuSlider.settingsBar.localScale.z);
+			menuSlider.SetBar(normalizedValue);
+		}
 
 		currentLangCount = translations.Count;
-		menuSlider.endValue = currentLangCount - 1;
 	}
 }

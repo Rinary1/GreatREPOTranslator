@@ -1,5 +1,4 @@
 #nullable disable
-
 using BepInEx.Logging;
 using BepInEx;
 using HarmonyLib;
@@ -78,7 +77,6 @@ public class REPO_Translator : BaseUnityPlugin
 
     private static AssetBundle _languageSliderBundle;
     private static GameObject _languageSliderPrefab;
-
 
     private void Awake()
     {
@@ -186,13 +184,13 @@ public class REPO_Translator : BaseUnityPlugin
     {
         try
         {
+            AlreadyTranslatedStrings.Clear();
+
             LoadTranslationsFromFile();
 
             UpdateAllTextMeshProObjects();
 
             WatchConfigFile();
-
-            AlreadyTranslatedStrings.Clear();
 
             Log.LogInfo("Translations successfully reloaded.");
         }
@@ -206,20 +204,20 @@ public class REPO_Translator : BaseUnityPlugin
     {
         foreach (var textObject in FindObjectsOfType<TMP_Text>())
             if (textObject != null)
-                UpdateTextMeshPro(textObject);
+            {
+                string text = textObject.text;
+                UpdateTextMeshProText(textObject, ref text, true);
+            }
     }
 
-    private static void UpdateTextMeshPro(TMP_Text textObject)
+    private static void UpdateTextMeshProText(TMP_Text textObject, ref string text, bool setText = true)
     {
-        if (textObject == null) return;
-
-        string text = textObject.text;
-        if (string.IsNullOrEmpty(text)) return;
-
-        if (textObject.transform.root == null) return;
+        if (textObject == null || string.IsNullOrEmpty(text) || textObject.transform.root == null)
+            return;
 
         string rootName = textObject.transform.root.gameObject.name;
-        if (rootName == "UniverseLibCanvas" || rootName == "ExplorerCanvas") return;
+        if (rootName == "UniverseLibCanvas" || rootName == "ExplorerCanvas")
+            return;
 
         if (!int.TryParse(text, out _))
         {
@@ -231,9 +229,8 @@ public class REPO_Translator : BaseUnityPlugin
                 textObject.font = TekoRegularAsset;
 
             string text2 = text;
-
-            Translate translate = AllTranslates.Find(t => DisplayReplaceTags(t.key) == text.Trim());
-            var parts = AllTranslates.Where(t => text.Contains(DisplayReplaceTags(t.key)) && t.part).ToList();
+            Translate translate = AllTranslates?.Find(t => DisplayReplaceTags(t.key) == text2.Trim());
+            var parts = AllTranslates?.Where(t => text2.Contains(DisplayReplaceTags(t.key)) && t.part).ToList();
 
             if (translate != null)
             {
@@ -254,7 +251,7 @@ public class REPO_Translator : BaseUnityPlugin
                     textObject.enableAutoSizing = translate.autoSizing;
                 }
             }
-            else if (parts.Any())
+            else if (parts != null && parts.Any())
             {
                 foreach (var part in parts)
                 {
@@ -267,7 +264,7 @@ public class REPO_Translator : BaseUnityPlugin
             {
                 if (!text2.Any(char.IsDigit) && REPO_Translator_Config.TranslatorDevModeEnabled.Value)
                 {
-                    Translate newTranslate = new Translate
+                    var newTranslate = new Translate
                     {
                         key = text2,
                         translate = text2,
@@ -282,7 +279,10 @@ public class REPO_Translator : BaseUnityPlugin
                 }
             }
 
-            textObject.SetText(text2, true);
+            if (setText)
+                textObject.SetText(text2, true);
+            else
+                text = text2;
         }
     }
 
@@ -290,85 +290,14 @@ public class REPO_Translator : BaseUnityPlugin
     [HarmonyPatch(typeof(TextMeshProUGUI), "OnEnable")]
     public static bool OV_TextMeshProUGUI_OnEnable(TextMeshProUGUI __instance)
     {
-        if (__instance != null)
+        if (__instance != null && AllTranslates != null)
         {
             string text = __instance.text;
-            if (!string.IsNullOrEmpty(text))
-            {
-                if (__instance.transform.root == null)
-                {
-                    return true;
-                }
-                if (__instance.transform.root.gameObject.name == "UniverseLibCanvas")
-                {
-                    return true;
-                }
-                if (__instance.transform.root.gameObject.name == "ExplorerCanvas")
-                {
-                    return true;
-                }
-                if (AllTranslates == null)
-                {
-                    Log.LogError("AllTranslates is null!");
-                    return true;
-                }
-                if (!int.TryParse(text, out var _))
-                {
-                    if (__instance.font.name.Contains("Perfect"))
-                        __instance.font = PerfectFontCyrillicAsset;
-                    else if (__instance.font.name.Contains("VCR OSD"))
-                        __instance.font = VCROSDFontCyrillicAsset;
-                    else if (__instance.font.name.Contains("Teko"))
-                        __instance.font = TekoRegularAsset;
-
-                    string text2 = text;
-                    Translate translate = AllTranslates.Find((Translate abiTrans) => DisplayReplaceTags(abiTrans.key) == text.Trim());
-                    List<Translate> parts = AllTranslates.Where((Translate partTrans) => text.Contains(DisplayReplaceTags(partTrans.key)) && partTrans.part).ToList();
-                    if (translate != null)
-                    {
-                        text2 = DisplayReplaceTags(translate.translate);
-                        AlreadyTranslatedStrings.Add(text2);
-
-                        if (translate.size != 0.0f)
-                        {
-                            __instance.fontSize = translate.size;
-                            __instance.lineSpacing = translate.lineSpacing != 0.0f ? translate.lineSpacing : __instance.lineSpacing;
-                            __instance.enableAutoSizing = false;
-                        }
-                        else
-                        {
-                            __instance.fontSizeMax = __instance.fontSize;
-                            __instance.fontSizeMin = translate.autoSizingFontMin;
-                            __instance.lineSpacing = translate.lineSpacing != 0.0f ? translate.lineSpacing : __instance.lineSpacing;
-                            __instance.enableAutoSizing = translate.autoSizing;
-                        }
-                    }
-                    else if (parts.Any())
-                    {
-                        foreach (var part in parts)
-                        {
-                            text2 = text2.Replace(part.key, part.translate);
-                            __instance.lineSpacing = part.lineSpacing != 0.0f ? part.lineSpacing : __instance.lineSpacing;
-                            __instance.enableAutoSizing = part.autoSizing;
-                        }
-                    }
-                    else if (!AlreadyTranslatedStrings.Contains(text2))
-                    {
-                        if (!text2.Any(char.IsDigit) && REPO_Translator_Config.TranslatorDevModeEnabled.Value)
-                        {
-                            Translate translate2 = new Translate();
-                            translate2.key = text2;
-                            translate2.translate = text2;
-                            translate2.size = __instance.fontSize;
-                            AllTranslates.Add(translate2);
-                            SaveTranslateData(AllTranslates);
-                        }
-                        else if (!IsMessageUnwanted(text2))
-                            Log.LogWarning($"WARNING: Untranslated Key: [{text2.Trim()}]");
-                    }
-                    __instance.SetText(text2, true);
-                }
-            }
+            UpdateTextMeshProText(__instance, ref text, setText: true);
+        }
+        else if (AllTranslates == null)
+        {
+            Log.LogError("AllTranslates is null!");
         }
         return true;
     }
@@ -377,80 +306,8 @@ public class REPO_Translator : BaseUnityPlugin
     [HarmonyPatch(typeof(TMP_Text), nameof(TMP_Text.text), MethodType.Setter)]
     public static bool OV_TMP_Text_text(TMP_Text __instance, ref string value)
     {
-        if ((UnityEngine.Object)(object)__instance != null)
-        {
-            string text = value;
-            if (!string.IsNullOrEmpty(text))
-            {
-                if ((UnityEngine.Object)(object)__instance.transform.root == null)
-                {
-                    return true;
-                }
-                if (__instance.transform.root.gameObject.name == "UniverseLibCanvas")
-                {
-                    return true;
-                }
-                if (__instance.transform.root.gameObject.name == "ExplorerCanvas")
-                {
-                    return true;
-                }
-                if (!int.TryParse(text, out var _))
-                {
-                    if (__instance.font.name.Contains("Perfect"))
-                        __instance.font = PerfectFontCyrillicAsset;
-                    else if (__instance.font.name.Contains("VCR OSD"))
-                        __instance.font = VCROSDFontCyrillicAsset;
-                    else if (__instance.font.name.Contains("Teko"))
-                        __instance.font = TekoRegularAsset;
-
-                    string text2 = text;
-                    Translate translate = AllTranslates.Find((Translate abiTrans) => DisplayReplaceTags(abiTrans.key) == text.Trim());
-                    var parts = AllTranslates.Where((Translate abiTrans) => text.Contains(DisplayReplaceTags(abiTrans.key)) && abiTrans.part).ToList();
-                    if (translate != null)
-                    {
-                        text2 = DisplayReplaceTags(translate.translate);
-                        AlreadyTranslatedStrings.Add(text2);
-
-                        if (translate.size != 0.0f)
-                        {
-                            __instance.fontSize = translate.size;
-                            __instance.lineSpacing = translate.lineSpacing != 0.0f ? translate.lineSpacing : __instance.lineSpacing;
-                            __instance.enableAutoSizing = false;
-                        }
-                        else
-                        {
-                            __instance.fontSizeMax = __instance.fontSize;
-                            __instance.fontSizeMin = translate.autoSizingFontMin;
-                            __instance.lineSpacing = translate.lineSpacing != 0.0f ? translate.lineSpacing : __instance.lineSpacing;
-                            __instance.enableAutoSizing = translate.autoSizing;
-                        }
-                    }
-                    else if (parts.Any())
-                    {
-                        foreach (var part in parts)
-                        {
-                            text2 = text2.Replace(part.key, part.translate);
-                            __instance.lineSpacing = part.lineSpacing != 0.0f ? part.lineSpacing : __instance.lineSpacing;
-                            __instance.enableAutoSizing = part.autoSizing;
-                        }
-                    }
-                    else if (!AlreadyTranslatedStrings.Contains(text2))
-                    {
-                        if (!text2.Any(char.IsDigit) && REPO_Translator_Config.TranslatorDevModeEnabled.Value)
-                        {
-                            Translate translate2 = new Translate();
-                            translate2.key = text2;
-                            translate2.translate = text2;
-                            AllTranslates.Add(translate2);
-                            SaveTranslateData(AllTranslates);
-                        }
-                        else if (!IsMessageUnwanted(text2))
-                            Log.LogWarning($"WARNING: Untranslated Key: [{text2.Trim()}]");
-                    }
-                    value = text2;
-                }
-            }
-        }
+        if (__instance != null)
+            UpdateTextMeshProText(__instance, ref value, setText: false);
         return true;
     }
 
