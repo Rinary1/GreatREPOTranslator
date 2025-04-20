@@ -5,6 +5,13 @@
 
 ---
 
+## 🌍 README на других языках
+
+- [EN](https://github.com/Rinary1/GreatREPOTranslator/blob/main/README.md)
+- [RU](https://github.com/Rinary1/GreatREPOTranslator/blob/main/README_RU.md)
+
+---
+
 ## 🚀 Особенности
 
 🔤 **Расширенные XAML-атрибуты для гибкой настройки перевода**:

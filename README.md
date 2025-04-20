@@ -5,6 +5,13 @@ Based on [REPO_Translator](https://thunderstore.io/c/repo/p/QERT2002/REPO_Transl
 
 ---
 
+## 🌍 README on other languages
+
+- [EN](https://github.com/Rinary1/GreatREPOTranslator/blob/main/README.md)
+- [RU](https://github.com/Rinary1/GreatREPOTranslator/blob/main/README_RU.md)
+
+---
+
 ## 🚀 Features
 
 🔤 **New XAML attributes for flexible translation**:
