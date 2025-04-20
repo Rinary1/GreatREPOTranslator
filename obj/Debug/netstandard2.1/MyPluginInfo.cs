@@ -4,6 +4,6 @@ namespace REPO_Translator
     {
         public const string PLUGIN_GUID = "REPO_Translator";
         public const string PLUGIN_NAME = "REPO_Translator";
-        public const string PLUGIN_VERSION = "1.1";
+        public const string PLUGIN_VERSION = "1.2";
     }
 }

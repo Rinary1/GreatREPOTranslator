@@ -17,7 +17,7 @@ using System.Runtime.CompilerServices;
 namespace Content.Client.Translator;
 
 [HarmonyPatch]
-[BepInPlugin("Great_REPO_Translator", "REPO_Translator", "1.1")]
+[BepInPlugin("Great_REPO_Translator", "REPO_Translator", "1.2")]
 public class REPO_Translator : BaseUnityPlugin
 {
     public class Translate

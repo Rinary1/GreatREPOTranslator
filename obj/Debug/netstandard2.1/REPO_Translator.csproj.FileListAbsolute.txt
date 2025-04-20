@@ -9,3 +9,15 @@ D:\Programms\REPO_Translator\bin\Debug\netstandard2.1\REPO_Translator.dll
 D:\Programms\REPO_Translator\bin\Debug\netstandard2.1\REPO_Translator.pdb
 D:\Programms\REPO_Translator\obj\Debug\netstandard2.1\REPO_Translator.dll
 D:\Programms\REPO_Translator\obj\Debug\netstandard2.1\REPO_Translator.pdb
+D:\Programms\GreatREPOTranslator\bin\Debug\netstandard2.1\REPO_Translator.deps.json
+D:\Programms\GreatREPOTranslator\bin\Debug\netstandard2.1\REPO_Translator.dll
+D:\Programms\GreatREPOTranslator\bin\Debug\netstandard2.1\REPO_Translator.pdb
+D:\Programms\GreatREPOTranslator\obj\Debug\netstandard2.1\REPO_Translator.csproj.AssemblyReference.cache
+D:\Programms\GreatREPOTranslator\obj\Debug\netstandard2.1\MyPluginInfo.cs
+D:\Programms\GreatREPOTranslator\obj\Debug\netstandard2.1\REPO_Translator.GeneratedMSBuildEditorConfig.editorconfig
+D:\Programms\GreatREPOTranslator\obj\Debug\netstandard2.1\REPO_Translator.AssemblyInfoInputs.cache
+D:\Programms\GreatREPOTranslator\obj\Debug\netstandard2.1\REPO_Translator.AssemblyInfo.cs
+D:\Programms\GreatREPOTranslator\obj\Debug\netstandard2.1\REPO_Translator.csproj.CoreCompileInputs.cache
+D:\Programms\GreatREPOTranslator\obj\Debug\netstandard2.1\REPO_Translator.sourcelink.json
+D:\Programms\GreatREPOTranslator\obj\Debug\netstandard2.1\REPO_Translator.dll
+D:\Programms\GreatREPOTranslator\obj\Debug\netstandard2.1\REPO_Translator.pdb

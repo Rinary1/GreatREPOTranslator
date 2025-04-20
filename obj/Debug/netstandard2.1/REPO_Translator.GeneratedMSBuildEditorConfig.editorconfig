@@ -1,6 +1,6 @@
 is_global = true
 build_property.RootNamespace = REPO_Translator
-build_property.ProjectDir = D:\Programms\REPO_Translator\
+build_property.ProjectDir = D:\Programms\GreatREPOTranslator\
 build_property.EnableComHosting = 
 build_property.EnableGeneratedComInterfaceComImportInterop = 
 build_property.CsWinRTUseWindowsUIXamlProjections = false
