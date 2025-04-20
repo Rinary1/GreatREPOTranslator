@@ -3,4 +3,7 @@ files:
     translation: /Resources/Translations/Translate_%two_letters_code%.%file_extension%
     content_segmentation: 0
     translatable_elements:
-      - '/ArrayOfTranslate/Translate[@translate]'
+      - xpath: /ArrayOfTranslate/Translate[@translate]
+        content_attribute: translate
+        key_attribute: key
+        preserve_non_translatable_attributes: 1
