@@ -1,0 +1,3 @@
+files:
+  - source: Resources/Translations/Translate_EN.xml
+    translation: /Resources/Translations/Translate_%two_letters_code%.%file_extension%
