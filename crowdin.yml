@@ -5,3 +5,9 @@ files:
     translate_attributes: 0
     translatable_elements:
       - '/ArrayOfTranslate/Translate[@translate]'
+      - '/ArrayOfTranslate/Translate[@part]'
+      - '/ArrayOfTranslate/Translate[@size]'
+      - '/ArrayOfTranslate/Translate[@lineSpacing]'
+      - '/ArrayOfTranslate/Translate[@autoSizing]'
+      - '/ArrayOfTranslate/Translate[@trim]'
+      - '/ArrayOfTranslate/Translate[@autoSizingFontMin]'
