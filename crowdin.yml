@@ -2,5 +2,6 @@ files:
   - source: Resources/Translations/Translate_EN.xml
     translation: /Resources/Translations/Translate_%two_letters_code%.%file_extension%
     content_segmentation: 0
+    translate_attributes: 0
     translatable_elements:
       - '/ArrayOfTranslate/Translate[@translate]'
