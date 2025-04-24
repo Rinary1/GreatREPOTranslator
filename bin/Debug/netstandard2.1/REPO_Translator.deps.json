@@ -14,7 +14,8 @@
           "BepInEx.PluginInfoProps": "2.1.0",
           "R.E.P.O.GameLibs.Steam": "0.1.2-ngd.0",
           "Unity3D.SDK": "2021.1.14.1",
-          "UnityEngine.Modules": "2022.3.21"
+          "UnityEngine.Modules": "2022.3.21",
+          "YamlDotNet": "16.0.0.0"
         },
         "runtime": {
           "REPO_Translator.dll": {}
@@ -379,7 +380,15 @@
           }
         }
       },
-      "UnityEngine.Modules/2022.3.21": {}
+      "UnityEngine.Modules/2022.3.21": {},
+      "YamlDotNet/16.0.0.0": {
+        "runtime": {
+          "YamlDotNet.dll": {
+            "assemblyVersion": "16.0.0.0",
+            "fileVersion": "16.3.0.0"
+          }
+        }
+      }
     }
   },
   "libraries": {
@@ -674,6 +683,11 @@
       "sha512": "sha512-l5ZNBDk9HyF3i8ISutWbc/jw24pYww0K0HIdbUN4RbzAnvO3lftvr15jyG0bTevBZuVxkwNrZ6SXY9pooIbIkA==",
       "path": "unityengine.modules/2022.3.21",
       "hashPath": "unityengine.modules.2022.3.21.nupkg.sha512"
+    },
+    "YamlDotNet/16.0.0.0": {
+      "type": "reference",
+      "serviceable": false,
+      "sha512": ""
     }
   }
 }

@@ -20,6 +20,8 @@ Based on [REPO_Translator](https://thunderstore.io/c/repo/p/QERT2002/REPO_Transl
 - `autoSizing` — auto-resize text (enabled by default).
 - `autoSizingFontMin` — minimum font size for auto-sizing.
 - `part` — partial translation for dynamic strings like `LEVEL 1`, where numbers change.
+- `trim` — clears string from unnecessary `\n` and spaces.
+- `newLine` — ONLY for `part` translation, adds a `<br>` after translation.
 
 🪵 **Dev Logs** — logs untranslated strings in a readable format, unlike the default dev mode.
 
@@ -33,11 +35,19 @@ Based on [REPO_Translator](https://thunderstore.io/c/repo/p/QERT2002/REPO_Transl
 
 📝 **Custom fonts** - fonts are specially modified to support Cyrillic characters and later other languages.
 
+📁 **Multiple File Extantions** - you can change your translation file extansion to YAML or XAML. 
+
 ---
 
 ## 🛠 How to Translate the Game
 
-By default, the mod translates the game into **Russian**.
+By default, the mod translates the game into **English**.
+
+## ⚙️ How to Change Game Language
+
+Just open the settings and select the language you need in the current localization.
+
+## 🛠 How to Add Your Own Language
 
 ### 🔍 Method 1: Manual Translation (Best Quality)
 

@@ -36,4 +36,11 @@
   <ItemGroup>
     <EmbeddedResource Include="Resources\**\*" />
   </ItemGroup>
+  
+  <ItemGroup>
+    <Reference Include="YamlDotNet">
+      <HintPath>YamlDotNet.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
 </Project>
