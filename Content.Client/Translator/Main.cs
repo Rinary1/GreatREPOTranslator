@@ -204,67 +204,51 @@ public class REPO_Translator : BaseUnityPlugin
         if (rootName == "UniverseLibCanvas" || rootName == "ExplorerCanvas")
             return;
 
-        if (!int.TryParse(text, out _))
+        if (int.TryParse(text, out _))
+            return;
+        
+        UpdateFontIfNeeded(textObject);
+        
+        if (AlreadyTranslatedStrings.TryGetValue(text, out string translated))
         {
-            if (textObject.font.name.Contains("Perfect"))
-                textObject.font = PerfectFontCyrillicAsset;
-            else if (textObject.font.name.Contains("VCR OSD"))
-                textObject.font = VCROSDFontCyrillicAsset;
-            else if (textObject.font.name.Contains("Teko"))
-                textObject.font = TekoRegularAsset;
+            if (setText && textObject.text != translated)
+                textObject.SetText(translated, true);
+            else
+                text = translated;
+            return;
+        }
+
+        string exportText = text;
+        Translate translate = AllTranslates?.Find(t => DisplayReplaceTags(t.key) == exportText.Trim());
+
+        if (translate != null)
+        {
+            exportText = translate.trim ? DisplayReplaceTags(translate.translate).Trim() : DisplayReplaceTags(translate.translate);
             
-            if (AlreadyTranslatedStrings.ContainsKey(text))
-            {
-                if (setText)
-                    textObject.SetText(AlreadyTranslatedStrings[text], true);
-                else
-                    text = AlreadyTranslatedStrings[text];
-                
-                return;
-            }
+            AlreadyTranslatedStrings[text] = exportText;
+            AlreadyTranslatedCodes[text] = _langMan.GetSelectedLanguage();
 
-            string exportText = text;
-            Translate translate = AllTranslates?.Find(t => DisplayReplaceTags(t.key) == exportText.Trim());
+            ApplyTranslateSettings(textObject, translate);
+        }
+        else
+        {
             var parts = AllTranslates?.Where(t => exportText.Contains(DisplayReplaceTags(t.key)) && t.part).ToList();
-
-            if (translate != null)
-            {
-                exportText = translate.trim ? DisplayReplaceTags(translate.translate).Trim() : DisplayReplaceTags(translate.translate);
-                if (!AlreadyTranslatedStrings.ContainsKey(text))
-                    AlreadyTranslatedStrings.Add(text, exportText);
-                string selectedLanguage = _langMan.GetSelectedLanguage();
-                if (!AlreadyTranslatedCodes.ContainsKey(text))
-                    AlreadyTranslatedCodes.Add(text, selectedLanguage);
-
-                if (translate.size != 0.0f)
-                {
-                    textObject.fontSize = translate.size;
-                    textObject.lineSpacing = translate.lineSpacing != 0.0f ? translate.lineSpacing : textObject.lineSpacing;
-                    textObject.enableAutoSizing = false;
-                }
-                else
-                {
-                    textObject.fontSizeMax = textObject.fontSize;
-                    textObject.fontSizeMin = translate.autoSizingFontMin;
-                    textObject.lineSpacing = translate.lineSpacing != 0.0f ? translate.lineSpacing : textObject.lineSpacing;
-                    textObject.enableAutoSizing = translate.autoSizing;
-                }
-            }
-            else if (parts != null && parts.Any())
+            if (parts != null && parts.Count > 0)
             {
                 foreach (var part in parts)
                 {
-                    var partTranslate = part.trim ? part.translate.Trim() : part.translate;
+                    string partTranslate = part.trim ? part.translate.Trim() : part.translate;
                     exportText = exportText.Replace(part.key, part.newLine ? string.Concat(partTranslate, "<br>") : partTranslate);
-                    if (!AlreadyTranslatedStrings.ContainsKey(text))
-                        AlreadyTranslatedStrings.Add(text, exportText);
-                    textObject.lineSpacing = part.lineSpacing != 0.0f ? part.lineSpacing : textObject.lineSpacing;
-                    textObject.enableAutoSizing = part.autoSizing;
                 }
+                
+                AlreadyTranslatedStrings[text] = exportText;
+                AlreadyTranslatedCodes[text] = _langMan.GetSelectedLanguage();
+
+                ApplyTranslateSettings(textObject, parts.Last());
             }
-            else if (!AlreadyTranslatedStrings.ContainsValue(exportText))
+            else if (!IsMessageUnwanted(exportText) && !exportText.Any(char.IsDigit))
             {
-                if (!exportText.Any(char.IsDigit) && REPO_Translator_Config.TranslatorDevModeEnabled.Value)
+                if (REPO_Translator_Config.TranslatorDevModeEnabled.Value)
                 {
                     var newTranslate = new Translate
                     {
@@ -275,20 +259,18 @@ public class REPO_Translator : BaseUnityPlugin
                     AllTranslates.Add(newTranslate);
                     SaveTranslateData(AllTranslates);
                 }
-                else if (!IsMessageUnwanted(exportText))
-                {
+                else
                     _logMan.TryLog($"WARNING: Untranslated Key: [{exportText.Trim()}]", LogType.Warning);
-                }
             }
-
-            if (StatsUI.instance != null && StatsUI.instance.textNumbers.lineSpacing != StatsUI.instance.Text.lineSpacing)
-                StatsUI.instance.textNumbers.lineSpacing = StatsUI.instance.Text.lineSpacing;
-
-            if (setText)
-                textObject.SetText(exportText, true);
-            else
-                text = exportText;
         }
+
+        if (StatsUI.instance != null && StatsUI.instance.textNumbers.lineSpacing != StatsUI.instance.Text.lineSpacing)
+            StatsUI.instance.textNumbers.lineSpacing = StatsUI.instance.Text.lineSpacing;
+
+        if (setText)
+            textObject.SetText(exportText, true);
+        else
+            text = exportText;
     }
 
     [HarmonyPrefix]
@@ -732,6 +714,35 @@ public class REPO_Translator : BaseUnityPlugin
                 return result;
         }
         return null;
+    }
+    
+    private static void UpdateFontIfNeeded(TMP_Text textObject)
+    {
+        string fontName = textObject.font.name;
+
+        if (fontName.Contains("Perfect") && textObject.font != PerfectFontCyrillicAsset)
+            textObject.font = PerfectFontCyrillicAsset;
+        else if (fontName.Contains("VCR OSD") && textObject.font != VCROSDFontCyrillicAsset)
+            textObject.font = VCROSDFontCyrillicAsset;
+        else if (fontName.Contains("Teko") && textObject.font != TekoRegularAsset)
+            textObject.font = TekoRegularAsset;
+    }
+    
+    private static void ApplyTranslateSettings(TMP_Text textObject, Translate translate)
+    {
+        if (translate.size != 0.0f)
+        {
+            textObject.fontSize = translate.size;
+            textObject.lineSpacing = translate.lineSpacing != 0.0f ? translate.lineSpacing : textObject.lineSpacing;
+            textObject.enableAutoSizing = false;
+        }
+        else
+        {
+            textObject.fontSizeMax = textObject.fontSize;
+            textObject.fontSizeMin = translate.autoSizingFontMin;
+            textObject.lineSpacing = translate.lineSpacing != 0.0f ? translate.lineSpacing : textObject.lineSpacing;
+            textObject.enableAutoSizing = translate.autoSizing;
+        }
     }
 
     public void InitializeTranslator()
