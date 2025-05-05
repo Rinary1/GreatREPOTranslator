@@ -21,3 +21,6 @@ D:\Programms\GreatREPOTranslator\obj\Debug\netstandard2.1\REPO_Translator.csproj
 D:\Programms\GreatREPOTranslator\obj\Debug\netstandard2.1\REPO_Translator.sourcelink.json
 D:\Programms\GreatREPOTranslator\obj\Debug\netstandard2.1\REPO_Translator.dll
 D:\Programms\GreatREPOTranslator\obj\Debug\netstandard2.1\REPO_Translator.pdb
+D:\Programms\GreatREPOTranslator\bin\Debug\netstandard2.1\YamlDotNet.dll
+D:\Programms\GreatREPOTranslator\bin\Debug\netstandard2.1\YamlDotNet.xml
+D:\Programms\GreatREPOTranslator\obj\Debug\netstandard2.1\REPO_Tra.69740CAA.Up2Date

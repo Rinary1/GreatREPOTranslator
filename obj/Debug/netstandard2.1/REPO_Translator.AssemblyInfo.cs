@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("REPO_Translator")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.1.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.1+96b705d3519397f80b214bf089132a9e154bb311")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.1+6dca7665c1734fbfbe5dc5e7378c4c1effca5596")]
 [assembly: System.Reflection.AssemblyProductAttribute("REPO_Translator")]
 [assembly: System.Reflection.AssemblyTitleAttribute("REPO_Translator")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.1.0.0")]

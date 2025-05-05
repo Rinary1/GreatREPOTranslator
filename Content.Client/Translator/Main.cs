@@ -1,5 +1,5 @@
 #nullable disable
-using BepInEx.Logging;
+
 using BepInEx;
 using HarmonyLib;
 using System.Collections.Generic;
@@ -12,57 +12,27 @@ using Content.Client.MenuSliderElement;
 using System;
 using TMPro;
 using UnityEngine;
-using System.Runtime.CompilerServices;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
+using LogType = Content.Client.LogManager.LogType;
+using static ChatManager;
+using UnityEngine.Events;
+using WebSocketSharp;
 
 namespace Content.Client.Translator;
 
 [HarmonyPatch]
-[BepInPlugin("Great_REPO_Translator", "REPO_Translator", "1.3.0")]
+[BepInPlugin("Great_REPO_Translator", "REPO_Translator", "1.3.6")]
 public class REPO_Translator : BaseUnityPlugin
 {
-    public class Translate
-    {
-        // Only For YAML, maybe... Font replace on this? Or another things, like external assets for texture translations?
-        public string type { get; set; } = "Translation";
-        
-        [XmlAttribute]
-        public string key { get; set; }
-
-        [XmlAttribute]
-        public string translate { get; set; }
-
-        [XmlAttribute]
-        public float size { get; set; } = 0.0f;
-
-        [XmlAttribute]
-        public float lineSpacing { get; set; } = 0.0f;
-
-        [XmlAttribute]
-        public bool autoSizing { get; set; } = true;
-
-        [XmlAttribute]
-        public float autoSizingFontMin { get; set; } = 0f;
-
-        [XmlAttribute]
-        public bool part { get; set; } = false;
-
-        [XmlAttribute]
-        public bool trim { get; set; } = false;
-        
-        // Only for part
-        [XmlAttribute]
-        public bool newLine { get; set; } = false;
-    }
 
     public static REPO_Translator PluginInstance;
 
     public static REPO_Translator_Config ConfigInstance;
 
-    public static LanguageManager.LanguageManager _langMan;
+    public static LogManager.LogManager _logMan;
 
-    public static ManualLogSource Log;
+    public static LanguageManager.LanguageManager _langMan;
 
     public static Harmony HarmonyInstance;
 
@@ -77,12 +47,16 @@ public class REPO_Translator : BaseUnityPlugin
     public static bool OneTimeInit;
 
     public static Dictionary<string, string> AlreadyTranslatedStrings; // Source -> Translation
-    
+
     public static Dictionary<string, string> AlreadyTranslatedCodes; // Source -> LanguageCode
-    
+
     public static Dictionary<string, InputKey> tagDictionary = new Dictionary<string, InputKey>();
 
     public static List<Translate> AllTranslates;
+
+    public static List<Translate> AllChatMessages;
+
+    public static List<DatasetEntry> AllDatasets;
 
     private FileSystemWatcher _configWatcher;
 
@@ -92,18 +66,18 @@ public class REPO_Translator : BaseUnityPlugin
     private void Awake()
     {
         PluginInstance = this;
-        Log = Logger;
         ConfigInstance = new REPO_Translator_Config(Config);
         ConfigInstance.RegisterOptions();
         _langMan = LanguageManager.LanguageManager.ManagerInstance ?? new LanguageManager.LanguageManager();
         _langMan.InitializeLanguages();
+        _logMan = LogManager.LogManager.ManagerInstance ?? new LogManager.LogManager();
 
         LoadFonts();
 
         HarmonyInstance = new Harmony("REPO_Translator");
         HarmonyInstance.PatchAll();
         InitializeTranslator();
-        Log.LogInfo("Loaded!");
+        _logMan.TryLog("Loaded!", LogType.Info);
     }
 
     private static void LoadFonts()
@@ -150,6 +124,12 @@ public class REPO_Translator : BaseUnityPlugin
 
     private static void WatchConfigFile()
     {
+        if (!REPO_Translator_Config.HotReloadEnabled.Value)
+        {
+            _logMan.TryLog("Hot Reload Disabled, startup denied", LogType.Info);
+            return;
+        }
+
         string configDir = TranslateFilePath;
         string configFile = GetTranslatePath();
 
@@ -157,8 +137,8 @@ public class REPO_Translator : BaseUnityPlugin
         {
             NotifyFilter = NotifyFilters.LastWrite
         };
-        Log.LogInfo($"Setuping file watcher in: {configDir}");
-        Log.LogInfo($"Watching file: Translate_{_langMan.GetSelectedLanguage()}" + GetTranslateExtantion());
+        _logMan.TryLog($"Setuping file watcher in: {configDir}", LogType.Info);
+        _logMan.TryLog($"Watching file: Translate_{_langMan.GetSelectedLanguage()}" + GetTranslateExtantion(), LogType.Info);
         PluginInstance._configWatcher.Filter = "Translate_" + _langMan.GetSelectedLanguage() + GetTranslateExtantion();
         PluginInstance._configWatcher.Changed += OnConfigFileChanged;
         PluginInstance._configWatcher.Created += OnConfigFileChanged;
@@ -168,7 +148,7 @@ public class REPO_Translator : BaseUnityPlugin
 
     private static void OnConfigFileChanged(object sender, FileSystemEventArgs e)
     {
-        Log.LogInfo($"Config file changed: {e.FullPath}, reloading...");
+        _logMan.TryLog($"Config file changed: {e.FullPath}, reloading...", LogType.Info);
         ReloadTranslations();
     }
 
@@ -182,11 +162,11 @@ public class REPO_Translator : BaseUnityPlugin
 
             WatchConfigFile();
 
-            Log.LogInfo("Translations successfully reloaded.");
+            _logMan.TryLog("Translations successfully reloaded.", LogType.Info);
         }
         catch (Exception ex)
         {
-            Log.LogError($"Error reloading translations: {ex}");
+            _logMan.TryLog($"Error reloading translations: {ex}", LogType.Error);
         }
     }
 
@@ -232,6 +212,16 @@ public class REPO_Translator : BaseUnityPlugin
                 textObject.font = VCROSDFontCyrillicAsset;
             else if (textObject.font.name.Contains("Teko"))
                 textObject.font = TekoRegularAsset;
+            
+            if (AlreadyTranslatedStrings.ContainsKey(text))
+            {
+                if (setText)
+                    textObject.SetText(AlreadyTranslatedStrings[text], true);
+                else
+                    text = AlreadyTranslatedStrings[text];
+                
+                return;
+            }
 
             string exportText = text;
             Translate translate = AllTranslates?.Find(t => DisplayReplaceTags(t.key) == exportText.Trim());
@@ -266,6 +256,8 @@ public class REPO_Translator : BaseUnityPlugin
                 {
                     var partTranslate = part.trim ? part.translate.Trim() : part.translate;
                     exportText = exportText.Replace(part.key, part.newLine ? string.Concat(partTranslate, "<br>") : partTranslate);
+                    if (!AlreadyTranslatedStrings.ContainsKey(text))
+                        AlreadyTranslatedStrings.Add(text, exportText);
                     textObject.lineSpacing = part.lineSpacing != 0.0f ? part.lineSpacing : textObject.lineSpacing;
                     textObject.enableAutoSizing = part.autoSizing;
                 }
@@ -285,10 +277,10 @@ public class REPO_Translator : BaseUnityPlugin
                 }
                 else if (!IsMessageUnwanted(exportText))
                 {
-                    Log.LogWarning($"WARNING: Untranslated Key: [{exportText.Trim()}]");
+                    _logMan.TryLog($"WARNING: Untranslated Key: [{exportText.Trim()}]", LogType.Warning);
                 }
             }
-            
+
             if (StatsUI.instance != null && StatsUI.instance.textNumbers.lineSpacing != StatsUI.instance.Text.lineSpacing)
                 StatsUI.instance.textNumbers.lineSpacing = StatsUI.instance.Text.lineSpacing;
 
@@ -298,20 +290,50 @@ public class REPO_Translator : BaseUnityPlugin
                 text = exportText;
         }
     }
-    
-    
+
+    [HarmonyPrefix]
+    [HarmonyPatch(typeof(ChatManager), "PossessChat")]
+    public static bool ChatManager_PossessChat(ChatManager __instance, PossessChatID _possessChatID, ref string message, float typingSpeed, Color _possessColor, float _messageDelay, bool sendInTaxmanChat, int sendInTaxmanChatEmojiInt, UnityEvent eventExecutionAfterMessageIsDone)
+    {
+        var exportMessage = message;
+        if (AllChatMessages?.Count > 0)
+        {
+            var found = AllChatMessages.Find(t => DisplayReplaceTags(t.key) == exportMessage.Trim());
+            var parts = AllChatMessages?.Where(t => exportMessage.Contains(DisplayReplaceTags(t.key)) && t.part).ToList();
+            if (found != null)
+                exportMessage = found.translate;
+            else if (parts != null && parts.Any())
+            {
+                foreach (var part in parts)
+                {
+                    var partTranslate = part.trim ? part.translate.Trim() : part.translate;
+                    exportMessage = exportMessage.Replace(part.key, part.newLine ? string.Concat(partTranslate, "<br>") : partTranslate);
+                }
+            }
+        }
+        message = exportMessage;
+
+        return true;
+    }
+
+
     // Fix for StatsUI: semiworks shitcode
     [HarmonyPrefix]
     [HarmonyPatch(typeof(StatsUI), "Fetch")]
     public static bool StatsUI_Fetch(StatsUI __instance)
     {
-        Dictionary<string, int> playerUpgrades = StatsManager.instance.FetchPlayerUpgrades(PlayerController.instance.playerSteamID);
+        var currentUpgrades = StatsManager.instance.FetchPlayerUpgrades(PlayerController.instance.playerSteamID);
+
+        if (__instance.playerUpgrades != null && __instance.playerUpgrades.Count == currentUpgrades.Count && !__instance.playerUpgrades.Except(currentUpgrades).Any())
+            return false;
+
+        __instance.playerUpgrades = StatsManager.instance.FetchPlayerUpgrades(PlayerController.instance.playerSteamID);
         __instance.Text.text = "";
         __instance.textNumbers.text = "";
         __instance.upgradesHeader.enabled = false;
-        __instance.scanlineObject.SetActive(false);
-        
-        foreach (KeyValuePair<string, int> playerUpgrade in playerUpgrades)
+        __instance.scanlineObject.SetActive(value: false);
+
+        foreach (KeyValuePair<string, int> playerUpgrade in __instance.playerUpgrades)
         {
             if (playerUpgrade.Value > 0)
             {
@@ -349,7 +371,7 @@ public class REPO_Translator : BaseUnityPlugin
         }
         else if (AllTranslates == null)
         {
-            Log.LogError("AllTranslates is null!");
+            _logMan.TryLog("AllTranslates is null!", LogType.Error);
         }
         return true;
     }
@@ -377,10 +399,10 @@ public class REPO_Translator : BaseUnityPlugin
     }
 
     public static string GetTranslatePath() => TranslateFilePath + "\\Translate_" + _langMan.GetSelectedLanguage() + GetTranslateExtantion();
-    
+
     public static string GetTranslateExtantion() => REPO_Translator_Config.TranslatorFileExtansion.Value == "YML" ? ".yml" : ".xml";
-    
-    public static List<Translate> GetTranslateData()
+
+    public static List<Translate> GetTranslateData(bool ChatMessages = false)
     {
         try
         {
@@ -397,9 +419,12 @@ public class REPO_Translator : BaseUnityPlugin
                 var yaml = File.ReadAllText(path);
                 var deserializer = new DeserializerBuilder()
                     .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                    .IgnoreUnmatchedProperties()
                     .Build();
 
-                list = deserializer.Deserialize<List<Translate>>(yaml);
+                var data = deserializer.Deserialize<TranslationDataFile>(yaml);
+
+                list = data.translations;
             }
             else if (extension == ".xml")
             {
@@ -413,7 +438,7 @@ public class REPO_Translator : BaseUnityPlugin
             {
                 throw new Exception($"Unsupported file extension: {extension}");
             }
-
+            
             list.RemoveAll(item =>
             {
                 bool invalid = string.IsNullOrWhiteSpace(item.key) || string.IsNullOrWhiteSpace(item.translate);
@@ -421,6 +446,9 @@ public class REPO_Translator : BaseUnityPlugin
                     Console.WriteLine("Warning: skipped translation with missing 'key' or 'translate'");
                 return invalid;
             });
+
+            if (ChatMessages)
+                list = list.Where(t => t.ChatMessage).ToList();
 
             return list;
         }
@@ -430,14 +458,63 @@ public class REPO_Translator : BaseUnityPlugin
             return new List<Translate>();
         }
     }
-    
-    public static void SaveTranslateData(List<Translate> dataToSave)
+
+    public static List<DatasetEntry> GetDatasetEntries()
+    {
+        try
+        {
+            if (_langMan.GetSelectedLanguage() == "EN")
+                return new List<DatasetEntry>();
+
+            string path = GetTranslatePath();
+            string extension = GetTranslateExtantion();
+
+            List<DatasetEntry> list = new List<DatasetEntry>();
+
+            if (extension == ".yml")
+            {
+                var yaml = File.ReadAllText(path);
+                var deserializer = new DeserializerBuilder().WithNamingConvention(CamelCaseNamingConvention.Instance).IgnoreUnmatchedProperties().Build();
+
+                var data = deserializer.Deserialize<TranslationDataFile>(yaml);
+
+                list = data.datasets;
+            }
+            else
+            {
+                throw new Exception($"Unsupported file extension: {extension}");
+            }
+            
+            list.RemoveAll(item =>
+            {
+                bool invalid = string.IsNullOrWhiteSpace(item.key) || item.translations.Count == 0;
+                if (invalid)
+                    Console.WriteLine("Warning: skipped dataset with missing 'key' or 'translations'");
+                return invalid;
+            });
+
+            return list;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading Datasets from file: {ex.Message}");
+            return new List<DatasetEntry>();
+        }
+    }
+
+    public static void SaveTranslateData(List<Translate> translations)
     {
         try
         {
             string path = GetTranslatePath();
             string extension = GetTranslateExtantion();
             
+            TranslationDataFile dataToSave = new TranslationDataFile
+            {
+                translations = translations,
+                datasets = AllDatasets
+            };
+
             if (extension == ".yml")
             {
                 var serializer = new SerializerBuilder().WithNamingConvention(CamelCaseNamingConvention.Instance).Build();
@@ -449,7 +526,7 @@ public class REPO_Translator : BaseUnityPlugin
             else if (extension == ".xml")
             {
                 TextWriter textWriter = new StreamWriter(GetTranslatePath());
-                new XmlSerializer(typeof(List<Translate>)).Serialize(textWriter, dataToSave);
+                new XmlSerializer(typeof(List<Translate>)).Serialize(textWriter, translations);
                 textWriter.Close();
             }
             else
@@ -467,9 +544,9 @@ public class REPO_Translator : BaseUnityPlugin
     {
         if (_text == null || InputManager.instance == null || tagDictionary == null || tagDictionary.Count == 0)
             return _text;
-        
+
         string text = _text;
-        
+
         foreach (KeyValuePair<string, InputKey> item in tagDictionary)
         {
             if (item.Key == "[move]" && text.Contains(item.Key))
@@ -516,12 +593,14 @@ public class REPO_Translator : BaseUnityPlugin
             }
             else
             {
-                Log.LogError("I can't find translation file, check instruction on this link:https://thunderstore.io/c/repo/p/QERT2002/REPO_Translator/ if you try to do translation on your language!!!");
+                _logMan.TryLog("I can't find translations file, maybe... You don't correct install me? Check instruction on: https://github.com/Rinary1/GreatREPOTranslator", LogType.Error);
             }
         }
         else
         {
             AllTranslates = GetTranslateData();
+            AllChatMessages = GetTranslateData(true);
+            AllDatasets = GetDatasetEntries();
         }
     }
 
@@ -555,21 +634,21 @@ public class REPO_Translator : BaseUnityPlugin
         var page = __instance.GetComponent<MenuPage>();
         if (page == null)
         {
-            Log.LogError("Page not founded");
+            _logMan.TryLog("Page not founded", LogType.Error);
             return;
         }
-            
+
 
         Transform scroller = FindDeepChild(page.transform, "Scroller");
         if (scroller == null)
         {
-            Log.LogError("Scroller not found inside page");
+            _logMan.TryLog("Scroller not found inside page", LogType.Error);
             return;
         }
 
         if (_languageSliderBundle == null || _languageSliderPrefab == null)
         {
-            Log.LogInfo("Loading AssetBundle and prefab for the first time...");
+            _logMan.TryLog("Loading AssetBundle and prefab for the first time...", LogType.Info);
 
             Stream LanguageSliderStream = LoadEmbeddedResource("REPO_Translator.Resources.prefab.unity3d");
             string TempLanguageSlider = Path.Combine(Path.GetTempPath(), "prefab.unity3d");
@@ -585,14 +664,14 @@ public class REPO_Translator : BaseUnityPlugin
             _languageSliderBundle = AssetBundle.LoadFromFile(TempLanguageSlider);
             if (_languageSliderBundle == null)
             {
-                Log.LogError("Failed to load AssetBundle.");
+                _logMan.TryLog("Failed to load AssetBundle.", LogType.Error);
                 return;
             }
 
             _languageSliderPrefab = _languageSliderBundle.LoadAsset<GameObject>("LanguageSlider");
             if (_languageSliderPrefab == null)
             {
-                Log.LogError("Failed to load prefab 'LanguageSlider' from bundle.");
+                _logMan.TryLog("Failed to load prefab 'LanguageSlider' from bundle.", LogType.Error);
                 return;
             }
         }
@@ -602,7 +681,7 @@ public class REPO_Translator : BaseUnityPlugin
         sliderPos.x = 3.7f;
         sliderObj.transform.localPosition = sliderPos;
         InsertAndShiftByY(scroller, sliderObj, 4);
-        Log.LogInfo("Language slider added to Gameplay settings");
+        _logMan.TryLog("Language slider added to Gameplay settings", LogType.Info);
         sliderObj.AddComponent<MenuSliderLanguage>();
     }
 
@@ -612,7 +691,7 @@ public class REPO_Translator : BaseUnityPlugin
 
         if (parent.childCount <= insertIndex)
         {
-            Log.LogError("Insert index out of range");
+            _logMan.TryLog("Insert index out of range", LogType.Error);
             return;
         }
 
@@ -659,13 +738,13 @@ public class REPO_Translator : BaseUnityPlugin
     {
         if (_langMan == null)
         {
-            Log.LogError("Language Manager not founded! NULL: Disabling Translator!");
+            _logMan.TryLog("Language Manager not founded! NULL: Disabling Translator!", LogType.Fatal);
             Destroy(gameObject);
             return;
         }
         else if (_langMan.GetSelectedLanguage() == null)
         {
-            Log.LogError("Selected Language not founded! NULL: Disabling Translator!");
+            _logMan.TryLog("Selected Language not founded! NULL: Disabling Translator!", LogType.Fatal);
             Destroy(gameObject);
             return;
         }
@@ -673,18 +752,18 @@ public class REPO_Translator : BaseUnityPlugin
         if (OneTimeInit)
             return;
 
-        Log.LogInfo("Selected Translate: " + _langMan.GetSelectedLanguage());
-        Log.LogInfo($"DEVMODE Translate Enabled?: {REPO_Translator_Config.TranslatorDevModeEnabled.Value}");
+        _logMan.TryLog("Selected Translate: " + _langMan.GetSelectedLanguage(), LogType.Info);
+        _logMan.TryLog($"DEVMODE Translate Enabled?: {REPO_Translator_Config.TranslatorDevModeEnabled.Value}", LogType.Info);
         TranslateFilePath = Path.GetDirectoryName(PluginInstance.Info.Location);
-        Log.LogInfo("TranslateFilePath: " + GetTranslatePath());
+        _logMan.TryLog("TranslateFilePath: " + GetTranslatePath(), LogType.Info);
         if (REPO_Translator_Config.TranslatorDevModeEnabled.Value)
-            Log.LogError("WARNING: YOU HAVE ENABLED DEVMODE TRANSLATOR, DO NOT EDIT THE TRANSLATE FILE BEFORE TURNING OFF THE GAME!!!!");
+            _logMan.TryLog("WARNING: YOU HAVE ENABLED DEVMODE TRANSLATOR, DO NOT EDIT THE TRANSLATE FILE BEFORE TURNING OFF THE GAME!!!!", LogType.Warning);
         AlreadyTranslatedStrings = new Dictionary<string, string>();
         AlreadyTranslatedCodes = new Dictionary<string, string>();
         LoadTranslationsFromFile();
         OneTimeInit = true;
         WatchConfigFile();
-        
+
         tagDictionary.Add("[move]", InputKey.Movement);
         tagDictionary.Add("[jump]", InputKey.Jump);
         tagDictionary.Add("[grab]", InputKey.Grab);

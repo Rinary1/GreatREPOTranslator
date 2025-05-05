@@ -12,7 +12,7 @@ Based on [REPO_Translator](https://thunderstore.io/c/repo/p/QERT2002/REPO_Transl
 
 ---
 
-## READ THIS IF YOU TRANSLATE CREATOR
+## READ THIS IF YOU'RE THE CREATOR OF THE TRANSLATION
 
 If you create, have created or are going to create your own translation based on my mod, PLEASE add it as an dependency as the author's soul has been put into this mod and it will greatly support the author to keep updating it.
 

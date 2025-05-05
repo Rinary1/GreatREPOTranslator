@@ -4,6 +4,7 @@ using Content.Client.Translator;
 using System.Linq;
 using SingularityGroup.HotReload;
 using System;
+using LogType = Content.Client.LogManager.LogType;
 
 namespace Content.Client.MenuSliderElement;
 
@@ -18,6 +19,8 @@ public class MenuSliderLanguage : MonoBehaviour
 	private static Translator.REPO_Translator _Translator = Translator.REPO_Translator.PluginInstance;
 
 	private static LanguageManager.LanguageManager _langMan = Translator.REPO_Translator._langMan;
+
+	private static LogManager.LogManager _logMan = Translator.REPO_Translator._logMan;
 
 	private static REPO_Translator_Config _config = Translator.REPO_Translator.ConfigInstance;
 
@@ -38,22 +41,17 @@ public class MenuSliderLanguage : MonoBehaviour
 			return;
 		}
 
-		if (_langMan == null)
+		if (_langMan == null || _langMan.Languages == null || _langMan.Languages.Count == 0)
 		{
-			InitializeLangMan();
+			_langMan = LanguageManager.LanguageManager.ManagerInstance ?? new LanguageManager.LanguageManager();
+			_langMan.InitializeLanguages();
+			if (_langMan.Languages == null || _langMan.Languages.Count == 0)
+				return;
 		}
 		else if (_langMan.GetSelectedLanguage() == null)
 		{
 			Debug.LogError("Selected Language not founded! NULL: Disabling Translator!");
 			return;
-		}
-
-
-		if (_langMan.Languages == null || _langMan.Languages.Count == 0)
-		{
-			InitializeLangMan();
-			if (_langMan.Languages == null || _langMan.Languages.Count == 0)
-				return;
 		}
 
 		var selectedSliderLang = menuSlider.customOptions[menuSlider.currentValue].customOptionText;
@@ -70,12 +68,6 @@ public class MenuSliderLanguage : MonoBehaviour
 		}
 	}
 
-	private void InitializeLangMan()
-	{
-		_langMan = LanguageManager.LanguageManager.ManagerInstance ?? new LanguageManager.LanguageManager();
-		_langMan.InitializeLanguages();
-	}
-
 	private void SetOptions()
 	{
 		if (menuSlider == null)
@@ -88,14 +80,17 @@ public class MenuSliderLanguage : MonoBehaviour
 
 		// Find Selected
 		if (_langMan == null)
-			InitializeLangMan();
+		{
+			_langMan = LanguageManager.LanguageManager.ManagerInstance ?? new LanguageManager.LanguageManager();
+			_langMan.InitializeLanguages();
+		}
 
 		string selectedLang = _langMan.GetSelectedLanguage();
 		int selectedIndex = 0;
 
 		// Find
 		var translations = _Translator.GetAllAvailableTranslations();
-		Translator.REPO_Translator.Log.LogInfo($"Found {translations.Count} translations.");
+		_logMan.TryLog($"Found {translations.Count} translations.", LogType.Info);
 
 		// Add
 		for (int i = 0; i < translations.Count; i++)
@@ -105,12 +100,12 @@ public class MenuSliderLanguage : MonoBehaviour
 
 			menuSlider.CustomOptionAdd(lang, langEvent);
 			menuSlider.customOptions[i].customValueInt = i;
-			Translator.REPO_Translator.Log.LogInfo($"Add translate to tab: {lang}");
+			_logMan.TryLog($"Add translate to tab: {lang}", LogType.Info);
 
 			if (lang.Equals(selectedLang, StringComparison.OrdinalIgnoreCase))
 			{
 				selectedIndex = i;
-				Translator.REPO_Translator.Log.LogInfo($"Finded selected language code: {lang}");
+				_logMan.TryLog($"Finded selected language code: {lang}", LogType.Info);
 			}
 		}
 

@@ -1,9 +1,11 @@
+#nullable disable
+
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using UnityEngine;
 using Content.Client.Translator;
-using SingularityGroup.HotReload;
+using LogType = Content.Client.LogManager.LogType;
 
 namespace Content.Client.LanguageManager;
 
@@ -19,6 +21,8 @@ public class LanguageManager
     public Dictionary<string, string> Languages = new Dictionary<string, string>();
 
     private static REPO_Translator_Config _config = Translator.REPO_Translator.ConfigInstance;
+
+    private static LogManager.LogManager _logMan = Translator.REPO_Translator._logMan;
 
     private void Awake()
     {
@@ -55,7 +59,7 @@ public class LanguageManager
             }
             catch (CultureNotFoundException)
             {
-                Translator.REPO_Translator.Log.LogError($"Language '{language}' not founded as real.");
+                _logMan.TryLog($"Language '{language}' not founded as real.", LogType.Error);
             }
         }
     }
@@ -68,7 +72,7 @@ public class LanguageManager
         }
         else
         {
-            Translator.REPO_Translator.Log.LogWarning("SELECTED LANGUAGE NOT FOUNDED, RETURNED EN");
+            _logMan.TryLog("SELECTED LANGUAGE NOT FOUNDED, RETURNED EN", LogType.Error);
             return "EN";
         }
     }
@@ -79,13 +83,13 @@ public class LanguageManager
             var SelectedLanguage = REPO_Translator_Config.SelectedTranslate.Value;
             if (string.IsNullOrEmpty(SelectedLanguage))
             {
-                Translator.REPO_Translator.Log.LogWarning("Loaded language is null or empty, falling back to EN.");
+                _logMan.TryLog("Loaded language is null or empty, falling back to EN.", LogType.Error);
                 REPO_Translator_Config.SelectedTranslate.Value = "EN";
             }
         }
         catch (Exception ex)
         {
-            Translator.REPO_Translator.Log.LogError("Failed to load language: " + ex.Message);
+            _logMan.TryLog("Failed to load language: " + ex.Message, LogType.Error);
             SaveLanguage();
         }
     }
