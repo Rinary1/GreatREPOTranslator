@@ -1,6 +1,0 @@
-D:\Programms\REPO_Translator\obj\Debug\netstandard2.0\REPO_Translator.csproj.AssemblyReference.cache
-D:\Programms\REPO_Translator\obj\Debug\netstandard2.0\MyPluginInfo.cs
-D:\Programms\REPO_Translator\obj\Debug\netstandard2.0\REPO_Translator.GeneratedMSBuildEditorConfig.editorconfig
-D:\Programms\REPO_Translator\obj\Debug\netstandard2.0\REPO_Translator.AssemblyInfoInputs.cache
-D:\Programms\REPO_Translator\obj\Debug\netstandard2.0\REPO_Translator.AssemblyInfo.cs
-D:\Programms\REPO_Translator\obj\Debug\netstandard2.0\REPO_Translator.csproj.CoreCompileInputs.cache
