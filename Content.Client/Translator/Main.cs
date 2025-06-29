@@ -22,7 +22,7 @@ using WebSocketSharp;
 namespace Content.Client.Translator;
 
 [HarmonyPatch]
-[BepInPlugin("Great_REPO_Translator", "REPO_Translator", "1.3.6")]
+[BepInPlugin("Great_REPO_Translator", "Great REPO Translator", "1.4.2")]
 public class REPO_Translator : BaseUnityPlugin
 {
 
@@ -46,9 +46,7 @@ public class REPO_Translator : BaseUnityPlugin
 
     public static bool OneTimeInit;
 
-    public static Dictionary<string, string> AlreadyTranslatedStrings; // Source -> Translation
-
-    public static Dictionary<string, string> AlreadyTranslatedCodes; // Source -> LanguageCode
+    public static Dictionary<string, TranslatedTextInfo> AlreadyTranslatedStrings; // Source -> Translation, Language, FontSize
 
     public static Dictionary<string, InputKey> tagDictionary = new Dictionary<string, InputKey>();
 
@@ -74,7 +72,7 @@ public class REPO_Translator : BaseUnityPlugin
 
         LoadFonts();
 
-        HarmonyInstance = new Harmony("REPO_Translator");
+        HarmonyInstance = new Harmony("Great_REPO_Translator");
         HarmonyInstance.PatchAll();
         InitializeTranslator();
         _logMan.TryLog("Loaded!", LogType.Info);
@@ -83,7 +81,7 @@ public class REPO_Translator : BaseUnityPlugin
     private static void LoadFonts()
     {
         string TempPerfectFontCyrillic = Path.Combine(Path.GetTempPath(), "PerfectDOSVGA437_CYRILLIC.ttf");
-        using (Stream PerfectFontCyrillicStream = LoadEmbeddedResource("REPO_Translator.Resources.Fonts.PerfectDOSVGA437_CYRILLIC.ttf"))
+        using (Stream PerfectFontCyrillicStream = LoadEmbeddedResource("Great_REPO_Translator.Resources.Fonts.PerfectDOSVGA437_CYRILLIC.ttf"))
         {
             using (var file = File.Create(TempPerfectFontCyrillic))
             {
@@ -94,7 +92,7 @@ public class REPO_Translator : BaseUnityPlugin
         PerfectFontCyrillicAsset = TMP_FontAsset.CreateFontAsset(PerfectFontCyrillic);
 
         string TempVCROSDFontCyrillic = Path.Combine(Path.GetTempPath(), "VCR_OSD_MONO_CYRILLIC.ttf");
-        using (Stream VCROSDFontCyrillicStream = LoadEmbeddedResource("REPO_Translator.Resources.Fonts.VCR_OSD_MONO_CYRILLIC.ttf"))
+        using (Stream VCROSDFontCyrillicStream = LoadEmbeddedResource("Great_REPO_Translator.Resources.Fonts.VCR_OSD_MONO_CYRILLIC.ttf"))
         {
             using (var file = File.Create(TempVCROSDFontCyrillic))
             {
@@ -105,7 +103,7 @@ public class REPO_Translator : BaseUnityPlugin
         VCROSDFontCyrillicAsset = TMP_FontAsset.CreateFontAsset(VCROSDFontCyrillic);
 
         string TempTekoRegular = Path.Combine(Path.GetTempPath(), "TekoRegular.ttf");
-        using (Stream TekoRegularStream = LoadEmbeddedResource("REPO_Translator.Resources.Fonts.TekoRegular.ttf"))
+        using (Stream TekoRegularStream = LoadEmbeddedResource("Great_REPO_Translator.Resources.Fonts.TekoRegular.ttf"))
         {
             using (var file = File.Create(TempTekoRegular))
             {
@@ -176,12 +174,11 @@ public class REPO_Translator : BaseUnityPlugin
         {
             if (textObject != null)
             {
-                string key = AlreadyTranslatedStrings.FirstOrDefault(pair => pair.Value == textObject.text).Key;
+                string key = AlreadyTranslatedStrings.FirstOrDefault(pair => pair.Value.TranslatedText == textObject.text).Key;
                 string currentSelectedLanguage = _langMan.GetSelectedLanguage();
-                if (key != null && AlreadyTranslatedCodes[key] != currentSelectedLanguage)
+                if (key != null && AlreadyTranslatedStrings.TryGetValue(key, out var info) && info.LanguageCode != currentSelectedLanguage)
                 {
                     AlreadyTranslatedStrings.Remove(key);
-                    AlreadyTranslatedCodes.Remove(key);
                     UpdateTextMeshProText(textObject, ref key, true);
                     textObject.text = key;
                 }
@@ -209,24 +206,26 @@ public class REPO_Translator : BaseUnityPlugin
         
         UpdateFontIfNeeded(textObject);
         
-        if (AlreadyTranslatedStrings.TryGetValue(text, out string translated))
+        if (AlreadyTranslatedStrings.TryGetValue(text, out TranslatedTextInfo translatedInfo) && translatedInfo.Translation != null)
         {
-            if (setText && textObject.text != translated)
-                textObject.SetText(translated, true);
+            if (translatedInfo.Translation != null)
+                ApplyTranslateSettings(textObject, translatedInfo.Translation);
+            
+            if (setText && textObject.text != translatedInfo.TranslatedText)
+                textObject.SetText(translatedInfo.TranslatedText, true);
             else
-                text = translated;
+                text = translatedInfo.TranslatedText;
             return;
         }
 
         string exportText = text;
-        Translate translate = AllTranslates?.Find(t => DisplayReplaceTags(t.key) == exportText.Trim());
+        Translate translate = AllTranslates?.Find(t => DisplayReplaceTags(t.key) == (t.ignoreCase ? exportText.Trim().ToLower() : exportText.Trim()));
 
         if (translate != null)
         {
             exportText = translate.trim ? DisplayReplaceTags(translate.translate).Trim() : DisplayReplaceTags(translate.translate);
             
-            AlreadyTranslatedStrings[text] = exportText;
-            AlreadyTranslatedCodes[text] = _langMan.GetSelectedLanguage();
+            AlreadyTranslatedStrings[text] = new TranslatedTextInfo(exportText, _langMan.GetSelectedLanguage(), translate);
 
             ApplyTranslateSettings(textObject, translate);
         }
@@ -238,11 +237,17 @@ public class REPO_Translator : BaseUnityPlugin
                 foreach (var part in parts)
                 {
                     string partTranslate = part.trim ? part.translate.Trim() : part.translate;
-                    exportText = exportText.Replace(part.key, part.newLine ? string.Concat(partTranslate, "<br>") : partTranslate);
+                    try
+                    {
+                        exportText = Regex.Replace(exportText, part.key, part.newLine ? $"{partTranslate}<br>" : partTranslate);
+                    }
+                    catch (ArgumentException ex)
+                    {
+                        _logMan.TryLog($"Invalid regex pattern in key: '{part.key}' — {ex.Message}", LogType.Warning);
+                    }
                 }
                 
-                AlreadyTranslatedStrings[text] = exportText;
-                AlreadyTranslatedCodes[text] = _langMan.GetSelectedLanguage();
+                AlreadyTranslatedStrings[text] = new TranslatedTextInfo(exportText, _langMan.GetSelectedLanguage(), null);
 
                 ApplyTranslateSettings(textObject, parts.Last());
             }
@@ -259,7 +264,7 @@ public class REPO_Translator : BaseUnityPlugin
                     AllTranslates.Add(newTranslate);
                     SaveTranslateData(AllTranslates);
                 }
-                else
+                else if (!AlreadyTranslatedStrings.TryGetValue(exportText, out TranslatedTextInfo dontTranslated))
                     _logMan.TryLog($"WARNING: Untranslated Key: [{exportText.Trim()}]", LogType.Warning);
             }
         }
@@ -357,7 +362,7 @@ public class REPO_Translator : BaseUnityPlugin
         }
         return true;
     }
-
+    
     [HarmonyPrefix]
     [HarmonyPatch(typeof(TMP_Text), nameof(TMP_Text.text), MethodType.Setter)]
     public static bool OV_TMP_Text_text(TMP_Text __instance, ref string value)
@@ -430,7 +435,7 @@ public class REPO_Translator : BaseUnityPlugin
             });
 
             if (ChatMessages)
-                list = list.Where(t => t.ChatMessage).ToList();
+                list = list.Where(t => t.chatMessage).ToList();
 
             return list;
         }
@@ -594,12 +599,11 @@ public class REPO_Translator : BaseUnityPlugin
             TranslateFilePath = Path.GetDirectoryName(PluginInstance.Info.Location);
 
         var files = Directory.GetFiles(TranslateFilePath, searchPattern);
+        
+        var Languages = files.Select(f => Path.GetFileNameWithoutExtension(f)).Where(name => name.StartsWith("Translate_")).Select(name => name.Replace("Translate_", "")).ToList();
+        Languages.Add("EN");
 
-        return files
-            .Select(f => Path.GetFileNameWithoutExtension(f))
-            .Where(name => name.StartsWith("Translate_"))
-            .Select(name => name.Replace("Translate_", ""))
-            .ToList();
+        return Languages;
     }
 
     public int GetAvailableTranslationsCount()
@@ -730,7 +734,7 @@ public class REPO_Translator : BaseUnityPlugin
     
     private static void ApplyTranslateSettings(TMP_Text textObject, Translate translate)
     {
-        if (translate.size != 0.0f)
+        if (translate.size != textObject.fontSize && translate.size != 0.0f)
         {
             textObject.fontSize = translate.size;
             textObject.lineSpacing = translate.lineSpacing != 0.0f ? translate.lineSpacing : textObject.lineSpacing;
@@ -738,8 +742,8 @@ public class REPO_Translator : BaseUnityPlugin
         }
         else
         {
-            textObject.fontSizeMax = textObject.fontSize;
-            textObject.fontSizeMin = translate.autoSizingFontMin;
+            textObject.fontSizeMax = translate.autoSizingMax != 0f ? translate.autoSizingMax : textObject.fontSize;
+            textObject.fontSizeMin = translate.autoSizingMin != 0f ? translate.autoSizingMin : textObject.fontSizeMin;
             textObject.lineSpacing = translate.lineSpacing != 0.0f ? translate.lineSpacing : textObject.lineSpacing;
             textObject.enableAutoSizing = translate.autoSizing;
         }
@@ -769,8 +773,7 @@ public class REPO_Translator : BaseUnityPlugin
         _logMan.TryLog("TranslateFilePath: " + GetTranslatePath(), LogType.Info);
         if (REPO_Translator_Config.TranslatorDevModeEnabled.Value)
             _logMan.TryLog("WARNING: YOU HAVE ENABLED DEVMODE TRANSLATOR, DO NOT EDIT THE TRANSLATE FILE BEFORE TURNING OFF THE GAME!!!!", LogType.Warning);
-        AlreadyTranslatedStrings = new Dictionary<string, string>();
-        AlreadyTranslatedCodes = new Dictionary<string, string>();
+        AlreadyTranslatedStrings = new Dictionary<string, TranslatedTextInfo>();
         LoadTranslationsFromFile();
         OneTimeInit = true;
         WatchConfigFile();

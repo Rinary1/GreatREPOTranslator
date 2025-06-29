@@ -38,9 +38,12 @@ public class Translate : TranslationEntry
 
     [XmlAttribute]
     public bool autoSizing { get; set; } = true;
+    
+    [XmlAttribute]
+    public float autoSizingMax { get; set; } = 0f;
 
     [XmlAttribute]
-    public float autoSizingFontMin { get; set; } = 0f;
+    public float autoSizingMin { get; set; } = 0f;
 
     [XmlAttribute]
     public bool part { get; set; } = false;
@@ -53,7 +56,10 @@ public class Translate : TranslationEntry
     public bool newLine { get; set; } = false;
 
     [XmlAttribute]
-    public bool ChatMessage { get; set; } = false;
+    public bool chatMessage { get; set; } = false;
+    
+    [XmlAttribute]
+    public bool ignoreCase { get; set; } = false;
 }
 
 public class DatasetEntry : TranslationEntry
@@ -66,4 +72,18 @@ public class DatasetEntry : TranslationEntry
     public string key { get; set; } = "";
 
     public List<string> translations { get; set; } = new List<string>();
+}
+
+public class TranslatedTextInfo
+{
+    public string TranslatedText;
+    public Translate? Translation = null;
+    public string LanguageCode;
+
+    public TranslatedTextInfo(string translatedText, string languageCode, Translate? translation = null)
+    {
+        TranslatedText = translatedText;
+        Translation = translation;
+        LanguageCode = languageCode;
+    }
 }

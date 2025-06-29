@@ -2,9 +2,9 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <AssemblyName>REPO_Translator</AssemblyName>
-    <Product>REPO_Translator</Product>
-    <Version>1.1</Version>
+    <AssemblyName>Great_REPO_Translator</AssemblyName>
+    <Product>Great_REPO_Translator</Product>
+    <Version>1.4.1</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <RestoreAdditionalProjectSources>
@@ -12,7 +12,7 @@
       https://nuget.bepinex.dev/v3/index.json;
       https://nuget.samboy.dev/v3/index.json
     </RestoreAdditionalProjectSources>
-    <RootNamespace>REPO_Translator</RootNamespace>
+    <RootNamespace>Great_REPO_Translator</RootNamespace>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
