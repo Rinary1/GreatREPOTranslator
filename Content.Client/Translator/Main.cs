@@ -77,39 +77,45 @@ public class REPO_Translator : BaseUnityPlugin
         InitializeTranslator();
         _logMan.TryLog("Loaded!", LogType.Info);
     }
-
+    
     private static void LoadFonts()
     {
-        string TempPerfectFontCyrillic = Path.Combine(Path.GetTempPath(), "PerfectDOSVGA437_CYRILLIC.ttf");
-        using (Stream PerfectFontCyrillicStream = LoadEmbeddedResource("Great_REPO_Translator.Resources.Fonts.PerfectDOSVGA437_CYRILLIC.ttf"))
+        string fallbackTempDir = Path.Combine(TranslateFilePath, "temp");
+
+        string tempPath = Path.GetTempPath();
+        try
         {
-            using (var file = File.Create(TempPerfectFontCyrillic))
-            {
-                PerfectFontCyrillicStream.CopyTo(file);
-            }
+            string testPath = Path.Combine(tempPath, "temp_test.tmp");
+            File.WriteAllText(testPath, "test");
+            File.Delete(testPath);
         }
+        catch
+        {
+            _logMan.TryLog($"Default temp path '{tempPath}' is not writable. Falling back to '{fallbackTempDir}'", LogType.Warning);
+            tempPath = fallbackTempDir;
+
+            if (!Directory.Exists(tempPath))
+                Directory.CreateDirectory(tempPath);
+        }
+
+        string TempPerfectFontCyrillic = Path.Combine(tempPath, "PerfectDOSVGA437_CYRILLIC.ttf");
+        using (Stream PerfectFontCyrillicStream = LoadEmbeddedResource("Great_REPO_Translator.Resources.Fonts.PerfectDOSVGA437_CYRILLIC.ttf"))
+        using (var file = File.Create(TempPerfectFontCyrillic))
+            PerfectFontCyrillicStream.CopyTo(file);
         Font PerfectFontCyrillic = new Font(TempPerfectFontCyrillic);
         PerfectFontCyrillicAsset = TMP_FontAsset.CreateFontAsset(PerfectFontCyrillic);
 
-        string TempVCROSDFontCyrillic = Path.Combine(Path.GetTempPath(), "VCR_OSD_MONO_CYRILLIC.ttf");
+        string TempVCROSDFontCyrillic = Path.Combine(tempPath, "VCR_OSD_MONO_CYRILLIC.ttf");
         using (Stream VCROSDFontCyrillicStream = LoadEmbeddedResource("Great_REPO_Translator.Resources.Fonts.VCR_OSD_MONO_CYRILLIC.ttf"))
-        {
-            using (var file = File.Create(TempVCROSDFontCyrillic))
-            {
-                VCROSDFontCyrillicStream.CopyTo(file);
-            }
-        }
+        using (var file = File.Create(TempVCROSDFontCyrillic))
+            VCROSDFontCyrillicStream.CopyTo(file);
         Font VCROSDFontCyrillic = new Font(TempVCROSDFontCyrillic);
         VCROSDFontCyrillicAsset = TMP_FontAsset.CreateFontAsset(VCROSDFontCyrillic);
 
-        string TempTekoRegular = Path.Combine(Path.GetTempPath(), "TekoRegular.ttf");
+        string TempTekoRegular = Path.Combine(tempPath, "TekoRegular.ttf");
         using (Stream TekoRegularStream = LoadEmbeddedResource("Great_REPO_Translator.Resources.Fonts.TekoRegular.ttf"))
-        {
-            using (var file = File.Create(TempTekoRegular))
-            {
-                TekoRegularStream.CopyTo(file);
-            }
-        }
+        using (var file = File.Create(TempTekoRegular))
+            TekoRegularStream.CopyTo(file);
         Font TekoRegularFont = new Font(TempTekoRegular);
         TekoRegularAsset = TMP_FontAsset.CreateFontAsset(TekoRegularFont);
     }
