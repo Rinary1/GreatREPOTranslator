@@ -187,8 +187,8 @@ public class REPO_Translator : BaseUnityPlugin
                     AlreadyTranslatedStrings.Remove(key);
                     UpdateTextMeshProText(textObject, ref key, true);
                     textObject.text = key;
-                }
-                else
+                } 
+                else if (key == null)
                 {
                     string text = textObject.text;
                     UpdateTextMeshProText(textObject, ref text, true);
