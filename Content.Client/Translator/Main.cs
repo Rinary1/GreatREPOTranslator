@@ -104,6 +104,10 @@ public class REPO_Translator : BaseUnityPlugin
             PerfectFontCyrillicStream.CopyTo(file);
         Font PerfectFontCyrillic = new Font(TempPerfectFontCyrillic);
         PerfectFontCyrillicAsset = TMP_FontAsset.CreateFontAsset(PerfectFontCyrillic);
+        var PerfectFontCyrillicMat = new Material(Shader.Find("TextMeshPro/Distance Field"));
+        
+        PerfectFontCyrillicMat.SetTexture(ShaderUtilities.ID_MainTex, PerfectFontCyrillicAsset.atlasTexture);
+        PerfectFontCyrillicAsset.material = PerfectFontCyrillicMat;
 
         string TempVCROSDFontCyrillic = Path.Combine(tempPath, "VCR_OSD_MONO_CYRILLIC.ttf");
         using (Stream VCROSDFontCyrillicStream = LoadEmbeddedResource("Great_REPO_Translator.Resources.Fonts.VCR_OSD_MONO_CYRILLIC.ttf"))
@@ -111,6 +115,10 @@ public class REPO_Translator : BaseUnityPlugin
             VCROSDFontCyrillicStream.CopyTo(file);
         Font VCROSDFontCyrillic = new Font(TempVCROSDFontCyrillic);
         VCROSDFontCyrillicAsset = TMP_FontAsset.CreateFontAsset(VCROSDFontCyrillic);
+        var VCROSDFontCyrillicMat = new Material(Shader.Find("TextMeshPro/Distance Field"));
+        
+        VCROSDFontCyrillicMat.SetTexture(ShaderUtilities.ID_MainTex, VCROSDFontCyrillicAsset.atlasTexture);
+        VCROSDFontCyrillicAsset.material = VCROSDFontCyrillicMat;
 
         string TempTekoRegular = Path.Combine(tempPath, "TekoRegular.ttf");
         using (Stream TekoRegularStream = LoadEmbeddedResource("Great_REPO_Translator.Resources.Fonts.TekoRegular.ttf"))
@@ -118,6 +126,10 @@ public class REPO_Translator : BaseUnityPlugin
             TekoRegularStream.CopyTo(file);
         Font TekoRegularFont = new Font(TempTekoRegular);
         TekoRegularAsset = TMP_FontAsset.CreateFontAsset(TekoRegularFont);
+        var TekoRegularFontMat = new Material(Shader.Find("TextMeshPro/Distance Field"));
+        
+        TekoRegularFontMat.SetTexture(ShaderUtilities.ID_MainTex, TekoRegularAsset.atlasTexture);
+        TekoRegularAsset.material = TekoRegularFontMat;
     }
 
     public static Stream LoadEmbeddedResource(string name)
@@ -799,5 +811,12 @@ public class REPO_Translator : BaseUnityPlugin
         tagDictionary.Add("[push]", InputKey.Push);
         tagDictionary.Add("[pull]", InputKey.Pull);
         tagDictionary.Add("[chat]", InputKey.Chat);
+		tagDictionary.Add("[expression1]", InputKey.Expression1);
+		tagDictionary.Add("[expression2]", InputKey.Expression2);
+		tagDictionary.Add("[expression3]", InputKey.Expression3);
+		tagDictionary.Add("[expression4]", InputKey.Expression4);
+		tagDictionary.Add("[expression5]", InputKey.Expression5);
+		tagDictionary.Add("[expression6]", InputKey.Expression6);
+		tagDictionary.Add("[menu]", InputKey.Menu);
     }
 }
