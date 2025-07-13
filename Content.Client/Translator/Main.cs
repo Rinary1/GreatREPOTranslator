@@ -49,6 +49,8 @@ public class REPO_Translator : BaseUnityPlugin
     public static Dictionary<string, TranslatedTextInfo> AlreadyTranslatedStrings; // Source -> Translation, Language, FontSize
 
     public static Dictionary<string, InputKey> tagDictionary = new Dictionary<string, InputKey>();
+    
+    private static readonly Dictionary<string, string> DisplayReplacedCache = new();
 
     public static List<Translate> AllTranslates;
 
@@ -547,44 +549,77 @@ public class REPO_Translator : BaseUnityPlugin
 
     public static string DisplayReplaceTags(string _text)
     {
-        if (_text == null || InputManager.instance == null || tagDictionary == null || tagDictionary.Count == 0)
+        if (string.IsNullOrEmpty(_text))
             return _text;
+        
+        if (InputManager.instance == null || tagDictionary == null || tagDictionary.Count == 0)
+            return _text;
+        
+        var tempText = _text;
+        
+        var usedTags = tagDictionary.Where(pair => tempText.Contains(pair.Key));
 
-        string text = _text;
-
-        foreach (KeyValuePair<string, InputKey> item in tagDictionary)
+        foreach (var item in usedTags)
         {
-            if (item.Key == "[move]" && text.Contains(item.Key))
+            if (!_text.Contains(item.Key))
+                continue;
+            
+            if (DisplayReplacedCache.TryGetValue(_text, out var cached))
+                return cached;
+            
+            string replacement = "";
+            if (item.Value == InputKey.Movement)
             {
-                string UpKey = DisplayTextReplace(InputManager.instance.GetMovementKeyString(MovementDirection.Up).Split('/')[^1].ToUpper());
-                string LeftKey = DisplayTextReplace(InputManager.instance.GetMovementKeyString(MovementDirection.Left).Split('/')[^1].ToUpper());
-                string DownKey = DisplayTextReplace(InputManager.instance.GetMovementKeyString(MovementDirection.Down).Split('/')[^1].ToUpper());
-                string RightKey = DisplayTextReplace(InputManager.instance.GetMovementKeyString(MovementDirection.Right).Split('/')[^1].ToUpper());
-                text = text.Replace(item.Key, "<u><b>" + UpKey + LeftKey + DownKey + RightKey + "</b></u>");
+                replacement = InputManager.instance.InputDisplayGet(item.Value, MenuKeybind.KeyType.MovementKey, MovementDirection.Up);
+                replacement += InputManager.instance.InputDisplayGet(item.Value, MenuKeybind.KeyType.MovementKey, MovementDirection.Left);
+                replacement += InputManager.instance.InputDisplayGet(item.Value, MenuKeybind.KeyType.MovementKey, MovementDirection.Down);
+                replacement += InputManager.instance.InputDisplayGet(item.Value, MenuKeybind.KeyType.MovementKey, MovementDirection.Right);
             }
-            else if (text.Contains(item.Key))
+            else
             {
-                string keyString = InputManager.instance.GetKeyString(item.Value);
-                string cleanedKey = DisplayTextReplace(keyString.Split('/')[^1].ToUpper());
-                if (keyString.Contains("scroll/y"))
-                    cleanedKey = DisplayTextReplace(keyString);
-
-                text = text.Replace(item.Key, "<u><b>" + cleanedKey + "</b></u>");
+                replacement = InputManager.instance.InputDisplayGet(item.Value, MenuKeybind.KeyType.InputKey, MovementDirection.Up);
             }
+            tempText = tempText.Replace(item.Key, $"<u><b>{replacement}</b></u>");
         }
-        return text;
+        
+        DisplayReplacedCache[_text] = tempText;
+        return tempText;
+    }
+    
+    public static void ClearDisplayReplaceCache()
+    {
+        DisplayReplacedCache.Clear();
+    }
+    
+    [HarmonyPatch(typeof(MenuKeybind), nameof(MenuKeybind.UpdateBindingDisplay))]
+    public static class Patch_MenuKeybind_UpdateBindingDisplay
+    {
+        [HarmonyPostfix]
+        public static void Postfix()
+        {
+            REPO_Translator.ClearDisplayReplaceCache();
+        }
     }
 
-    public static string DisplayTextReplace(string text)
+    
+    [HarmonyPatch(typeof(InputManager), nameof(InputManager.Rebind))]
+    public static class Patch_InputManager_Rebind
     {
-        if (text == "CTRL") return "CONTROL";
-        if (text == "LEFTSHIFT") return "LEFT SHIFT";
-        if (text == "LEFTBUTTON") return "MOUSE LEFT";
-        else if (text == "RIGHTBUTTON") return "MOUSE RIGHT";
-        else if (text == "MIDDLEBUTTON") return "MOUSE MIDDLE";
-        else if (text.Contains("scroll/y")) return "MOUSE SCROLL";
+        [HarmonyPostfix]
+        public static void Postfix()
+        {
+            REPO_Translator.ClearDisplayReplaceCache();
+        }
+    }
 
-        return text;
+    [HarmonyPatch(typeof(InputManager), nameof(InputManager.RebindMovementKey))]
+    public static class Patch_InputManager_RebindMovement
+    {
+        [HarmonyPostfix]
+        public static void Postfix()
+        {
+            REPO_Translator.ClearDisplayReplaceCache();
+        }
     }
 
     public static void LoadTranslationsFromFile()
