@@ -3,6 +3,7 @@
 using BepInEx;
 using HarmonyLib;
 using System.Collections.Generic;
+using System.Collections;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -68,6 +69,7 @@ public class REPO_Translator : BaseUnityPlugin
         PluginInstance = this;
         ConfigInstance = new REPO_Translator_Config(Config);
         ConfigInstance.RegisterOptions();
+        var _inputMan = InputManager.instance ?? new InputManager();
         _langMan = LanguageManager.LanguageManager.ManagerInstance ?? new LanguageManager.LanguageManager();
         _langMan.InitializeLanguages();
         _logMan = LogManager.LogManager.ManagerInstance ?? new LogManager.LogManager();
@@ -239,11 +241,16 @@ public class REPO_Translator : BaseUnityPlugin
         }
 
         string exportText = text;
-        Translate translate = AllTranslates?.Find(t => DisplayReplaceTags(t.key) == (t.ignoreCase ? exportText.Trim().ToLower() : exportText.Trim()));
+        string trimmedText = exportText.Trim();
+        string loweredText = trimmedText.ToLower();
+        Translate translate = AllTranslates?.Find(t => (t.parsedKey.IsNullOrEmpty() ? t.key : t.parsedKey) == (t.ignoreCase ? loweredText : trimmedText));
 
         if (translate != null)
         {
-            exportText = translate.trim ? DisplayReplaceTags(translate.translate).Trim() : DisplayReplaceTags(translate.translate);
+            if (translate.parsedTranslation.IsNullOrEmpty())
+                exportText = translate.trim ? translate.translate.Trim() : translate.translate;
+            else
+                exportText = translate.trim ? translate.parsedTranslation.Trim() : translate.parsedTranslation;
             
             AlreadyTranslatedStrings[text] = new TranslatedTextInfo(exportText, _langMan.GetSelectedLanguage(), translate);
 
@@ -251,7 +258,7 @@ public class REPO_Translator : BaseUnityPlugin
         }
         else
         {
-            var parts = AllTranslates?.Where(t => exportText.Contains(DisplayReplaceTags(t.key)) && t.part).ToList();
+            var parts = AllTranslates?.Where(t => t.part && exportText.Contains((t.parsedKey.IsNullOrEmpty() ? t.key : t.parsedKey))).ToList();
             if (parts != null && parts.Count > 0)
             {
                 foreach (var part in parts)
@@ -285,7 +292,7 @@ public class REPO_Translator : BaseUnityPlugin
                     SaveTranslateData(AllTranslates);
                 }
                 else if (!AlreadyTranslatedStrings.TryGetValue(exportText, out TranslatedTextInfo dontTranslated))
-                    _logMan.TryLog($"WARNING: Untranslated Key: [{exportText.Trim()}]", LogType.Warning);
+                    _logMan.TryLog($"WARNING: Untranslated Key: [{trimmedText}]", LogType.Warning);
             }
         }
 
@@ -546,14 +553,51 @@ public class REPO_Translator : BaseUnityPlugin
             Console.WriteLine($"Error saving Translation YAML: {ex.Message}");
         }
     }
+    
+    public static List<Translate> PreprocessDisplayTags(List<Translate> translates)
+    {
+        if (translates == null || translates.Count == 0) {
+            _logMan.TryLog($"Returning empty translation", LogType.Warning);
+            return new List<Translate>();
+        }
+        
+        var Export = translates;
+        
+        _logMan.TryLog($"Attempting to parse display tags", LogType.Warning);
+
+        foreach (var t in Export)
+        {
+            if (string.IsNullOrWhiteSpace(t.key))
+                continue;
+
+            t.parsedKey = DisplayReplaceTags(t.key);
+
+            if (!string.IsNullOrWhiteSpace(t.translate))
+                t.parsedTranslation = DisplayReplaceTags(t.translate);
+        }
+        
+        return Export;
+    }
 
     public static string DisplayReplaceTags(string _text)
     {
         if (string.IsNullOrEmpty(_text))
+        {
+            _logMan.TryLog($"String is null or empty", LogType.Warning);
             return _text;
+        }
         
-        if (InputManager.instance == null || tagDictionary == null || tagDictionary.Count == 0)
+        if (InputManager.instance == null)
+        {
+            _logMan.TryLog($"InputManager null", LogType.Warning);
             return _text;
+        }
+        
+        if (tagDictionary == null || tagDictionary.Count == 0)
+        {
+            _logMan.TryLog($"tag dictionary null or empty", LogType.Warning);
+            return _text;
+        }
         
         var tempText = _text;
         
@@ -561,9 +605,6 @@ public class REPO_Translator : BaseUnityPlugin
 
         foreach (var item in usedTags)
         {
-            if (!_text.Contains(item.Key))
-                continue;
-            
             if (DisplayReplacedCache.TryGetValue(_text, out var cached))
                 return cached;
             
@@ -591,6 +632,16 @@ public class REPO_Translator : BaseUnityPlugin
         DisplayReplacedCache.Clear();
     }
     
+    [HarmonyPatch(typeof(InputManager), nameof(InputManager.Awake))]
+    public static class Patch_InputManager_Awake
+    {
+        [HarmonyPostfix]
+        public static void Postfix()
+        {
+            REPO_Translator.AllTranslates = REPO_Translator.PreprocessDisplayTags(REPO_Translator.AllTranslates);
+        }
+    }
+    
     [HarmonyPatch(typeof(MenuKeybind), nameof(MenuKeybind.UpdateBindingDisplay))]
     public static class Patch_MenuKeybind_UpdateBindingDisplay
     {
@@ -598,10 +649,10 @@ public class REPO_Translator : BaseUnityPlugin
         public static void Postfix()
         {
             REPO_Translator.ClearDisplayReplaceCache();
+            REPO_Translator.AllTranslates = REPO_Translator.PreprocessDisplayTags(REPO_Translator.AllTranslates);
         }
     }
 
-    
     [HarmonyPatch(typeof(InputManager), nameof(InputManager.Rebind))]
     public static class Patch_InputManager_Rebind
     {
@@ -609,6 +660,7 @@ public class REPO_Translator : BaseUnityPlugin
         public static void Postfix()
         {
             REPO_Translator.ClearDisplayReplaceCache();
+            REPO_Translator.AllTranslates = REPO_Translator.PreprocessDisplayTags(REPO_Translator.AllTranslates);
         }
     }
 
@@ -619,6 +671,7 @@ public class REPO_Translator : BaseUnityPlugin
         public static void Postfix()
         {
             REPO_Translator.ClearDisplayReplaceCache();
+            REPO_Translator.AllTranslates = REPO_Translator.PreprocessDisplayTags(REPO_Translator.AllTranslates);
         }
     }
 

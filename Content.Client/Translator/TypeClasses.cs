@@ -60,6 +60,10 @@ public class Translate : TranslationEntry
     
     [XmlAttribute]
     public bool ignoreCase { get; set; } = false;
+    
+    public string parsedKey { get; set; } = "";
+    
+    public string parsedTranslation { get; set; } = "";
 }
 
 public class DatasetEntry : TranslationEntry
