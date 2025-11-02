@@ -139,7 +139,11 @@ public class REPO_Translator : BaseUnityPlugin
     public static Stream LoadEmbeddedResource(string name)
     {
         var asm = Assembly.GetExecutingAssembly();
-        return asm.GetManifestResourceStream(name);
+        _logMan.TryLog($"Available embedded resources:\n - {string.Join("\n - ", asm.GetManifestResourceNames())}", LogType.Debug);
+        Stream data = asm.GetManifestResourceStream(name);
+        if (data == null)
+            _logMan.TryLog($"Embedded resource: {name} not found! Check name and .resx settings.", LogType.Error);
+        return data;
     }
 
     private static void WatchConfigFile()
@@ -291,7 +295,7 @@ public class REPO_Translator : BaseUnityPlugin
                     AllTranslates.Add(newTranslate);
                     SaveTranslateData(AllTranslates);
                 }
-                else if (!AlreadyTranslatedStrings.TryGetValue(exportText, out TranslatedTextInfo dontTranslated))
+                else if (!AlreadyTranslatedStrings.TryGetValue(exportText, out _))
                     _logMan.TryLog($"WARNING: Untranslated Key: [{trimmedText}]", LogType.Warning);
             }
         }
@@ -312,8 +316,8 @@ public class REPO_Translator : BaseUnityPlugin
         var exportMessage = message;
         if (AllChatMessages?.Count > 0)
         {
-            var found = AllChatMessages.Find(t => DisplayReplaceTags(t.key) == exportMessage.Trim());
-            var parts = AllChatMessages?.Where(t => exportMessage.Contains(DisplayReplaceTags(t.key)) && t.part).ToList();
+            var found = AllChatMessages.Find(t => DisplayReplaceTags(t.key, t.inputTagPrefix, t.inputTagSuffix) == exportMessage.Trim());
+            var parts = AllChatMessages?.Where(t => exportMessage.Contains(DisplayReplaceTags(t.key, t.inputTagPrefix, t.inputTagSuffix)) && t.part).ToList();
             if (found != null)
                 exportMessage = found.translate;
             else if (parts != null && parts.Any())
@@ -570,16 +574,16 @@ public class REPO_Translator : BaseUnityPlugin
             if (string.IsNullOrWhiteSpace(t.key))
                 continue;
 
-            t.parsedKey = DisplayReplaceTags(t.key);
+            t.parsedKey = DisplayReplaceTags(t.key, t.inputTagPrefix, t.inputTagSuffix);
 
             if (!string.IsNullOrWhiteSpace(t.translate))
-                t.parsedTranslation = DisplayReplaceTags(t.translate);
+                t.parsedTranslation = DisplayReplaceTags(t.translate, t.inputTagPrefix, t.inputTagSuffix);
         }
         
         return Export;
     }
 
-    public static string DisplayReplaceTags(string _text)
+    public static string DisplayReplaceTags(string _text, string _prefix = "<u><b>", string _suffix = "</b></u>")
     {
         if (string.IsNullOrEmpty(_text))
         {
@@ -620,7 +624,7 @@ public class REPO_Translator : BaseUnityPlugin
             {
                 replacement = InputManager.instance.InputDisplayGet(item.Value, MenuKeybind.KeyType.InputKey, MovementDirection.Up);
             }
-            tempText = tempText.Replace(item.Key, $"<u><b>{replacement}</b></u>");
+            tempText = tempText.Replace(item.Key, _prefix + replacement + _suffix);
         }
         
         DisplayReplacedCache[_text] = tempText;
@@ -742,16 +746,23 @@ public class REPO_Translator : BaseUnityPlugin
         {
             _logMan.TryLog("Loading AssetBundle and prefab for the first time...", LogType.Info);
 
-            Stream LanguageSliderStream = LoadEmbeddedResource("REPO_Translator.Resources.prefab.unity3d");
             string TempLanguageSlider = Path.Combine(Path.GetTempPath(), "prefab.unity3d");
-
-            if (!File.Exists(TempLanguageSlider))
+            using (Stream resourceStream = LoadEmbeddedResource("Great_REPO_Translator.Resources.prefab.unity3d"))
             {
-                using (var file = File.Create(TempLanguageSlider))
+                if (resourceStream == null)
                 {
-                    LanguageSliderStream.CopyTo(file);
+                    _logMan.TryLog("Embedded resource not found!", LogType.Error);
+                    return;
                 }
+
+                _logMan.TryLog($"Embedded resource length: {resourceStream.Length} bytes", LogType.Debug);
+
+                using (var file = File.Create(TempLanguageSlider))
+                    resourceStream.CopyTo(file);
             }
+
+            long size = new FileInfo(TempLanguageSlider).Length;
+            _logMan.TryLog($"Wrote temp file {TempLanguageSlider} ({size} bytes)", LogType.Info);
 
             _languageSliderBundle = AssetBundle.LoadFromFile(TempLanguageSlider);
             if (_languageSliderBundle == null)

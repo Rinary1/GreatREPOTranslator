@@ -64,6 +64,12 @@ public class Translate : TranslationEntry
     public string parsedKey { get; set; } = "";
     
     public string parsedTranslation { get; set; } = "";
+
+    [XmlAttribute]
+    public string inputTagPrefix { get; set; } = "<u><b>";
+
+    [XmlAttribute]
+    public string inputTagSuffix { get; set; } = "</b></u>";
 }
 
 public class DatasetEntry : TranslationEntry
